@@ -351,6 +351,7 @@ public partial class MainWindowViewModel
 
     partial void OnCompareOverlayOffsetXChanged(int value)
     {
+        OnPropertyChanged(nameof(CompareOverlayOffsetXText));
         OnPropertyChanged(nameof(CompareOverlaySummaryText));
         OnPropertyChanged(nameof(CompareOverlayOffsetText));
         OnPropertyChanged(nameof(CurrentComparePoseText));
@@ -359,6 +360,7 @@ public partial class MainWindowViewModel
 
     partial void OnCompareOverlayOffsetYChanged(int value)
     {
+        OnPropertyChanged(nameof(CompareOverlayOffsetYText));
         OnPropertyChanged(nameof(CompareOverlaySummaryText));
         OnPropertyChanged(nameof(CompareOverlayOffsetText));
         OnPropertyChanged(nameof(CurrentComparePoseText));
@@ -379,6 +381,7 @@ public partial class MainWindowViewModel
             return;
         }
 
+        OnPropertyChanged(nameof(CompareOverlayOpacityPercentText));
         OnPropertyChanged(nameof(CompareOverlaySummaryText));
         OnPropertyChanged(nameof(CompareOverlayOpacityText));
         RefreshLivePreviewImage();

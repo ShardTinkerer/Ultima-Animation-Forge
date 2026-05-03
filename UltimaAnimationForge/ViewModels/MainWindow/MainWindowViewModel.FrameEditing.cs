@@ -3466,4 +3466,31 @@ public partial class MainWindowViewModel
 
         return 23; // Horse_Walk_01
     }
+
+    private void ApplyCurrentComparePoseToAllFrames()
+    {
+        if (editableFrames.Count == 0)
+        {
+            StatusText = "No frames are loaded.";
+            return;
+        }
+
+        for (int i = 0; i < editableFrames.Count; i++)
+        {
+            compareFramePoses[i] = new CompareFramePose
+            {
+                OffsetX = CompareOverlayOffsetX,
+                OffsetY = CompareOverlayOffsetY
+            };
+        }
+
+        OnPropertyChanged(nameof(CurrentComparePoseText));
+        OnPropertyChanged(nameof(HasComparePoseForCurrentFrame));
+
+        RefreshLivePreviewImage();
+
+        StatusText =
+            "Applied current rider overlay offset to all frames for preview alignment only. " +
+            "This does not edit MUL/IDX.";
+    }
 }

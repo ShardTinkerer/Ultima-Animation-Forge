@@ -103,6 +103,60 @@ public partial class MainWindowViewModel : ViewModelBase
     private int compareOverlayDragStartOffsetX;
     private int compareOverlayDragStartOffsetY;
 
+    public string CompareOverlayOffsetXText
+    {
+        get => CompareOverlayOffsetX.ToString();
+
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            if (int.TryParse(value, out int result))
+            {
+                CompareOverlayOffsetX = result;
+            }
+        }
+    }
+
+    public string CompareOverlayOffsetYText
+    {
+        get => CompareOverlayOffsetY.ToString();
+
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            if (int.TryParse(value, out int result))
+            {
+                CompareOverlayOffsetY = result;
+            }
+        }
+    }
+
+    public string CompareOverlayOpacityPercentText
+    {
+        get => CompareOverlayOpacityPercent.ToString("0.##");
+
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            if (double.TryParse(value, out double result))
+            {
+                CompareOverlayOpacityPercent = Math.Clamp(result, 0, 100);
+            }
+        }
+    }
+
     [ObservableProperty]
     private bool compareOverlayDragModeEnabled = false;
 
@@ -471,6 +525,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public ICommand PopOutDebugCommand { get; }
     public ICommand ConfigureLivePreviewHueCommand { get; }
     public ICommand ConfigureLivePreviewScaleCommand { get; }
+    public ICommand ApplyCurrentComparePoseToAllFramesCommand { get; }
 
     private readonly Dictionary<int, Dictionary<int, List<VdFrameData>>> importedSpriteSheetActions = new();
 
@@ -624,6 +679,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyCompareOverlayToCurrentFrameCommand = new RelayCommand(ApplyCompareOverlayToCurrentFrame);
         ApplyCompareOverlayToCurrentDirectionCommand = new RelayCommand(ApplyCompareOverlayToCurrentDirection);
         OpenMythicPackageViewerCommand = new RelayCommand(OpenMythicPackageViewer);
+        ApplyCurrentComparePoseToAllFramesCommand = new RelayCommand(ApplyCurrentComparePoseToAllFrames);
 
         TogglePreviewDragModeCommand = new RelayCommand(() =>
         {
