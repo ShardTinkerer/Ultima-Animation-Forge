@@ -119,3 +119,16 @@ public sealed class AnimationFrameThumbnail
 
     public string DisplayText => (FrameIndex + 1).ToString("D3");
 }
+
+public sealed class AnimationBrowserTileViewModel
+{
+    public AnimationEntry? SourceEntry { get; set; }
+
+    public WriteableBitmap? Thumbnail { get; set; }
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string SecondaryText { get; set; } = string.Empty;
+
+    public string SourceText { get; set; } = string.Empty;
+}

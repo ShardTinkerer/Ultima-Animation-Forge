@@ -26,6 +26,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private Window? detachedPreviewWindow;
     private Window? detachedDebugWindow;
     private DetachedPreviewViewModel? detachedPreviewViewModel;
+    private readonly Dictionary<string, WriteableBitmap?> animationBrowserThumbnailCache = new();
+    private bool syncingAnimationBrowserSelection;
 
     public IRelayCommand OpenDiscordCommand => new RelayCommand(OpenDiscord);
 
@@ -73,6 +75,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private readonly List<WriteableBitmap> compareOverlayFrames = new();
     private string compareOverlayCacheKey = string.Empty;
+
+    public ObservableCollection<AnimationBrowserTileViewModel> AnimationBrowserTiles { get; } = new();
 
     [ObservableProperty]
     private bool compareOverlayEnabled = false;
@@ -166,6 +170,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public ICommand ApplyCompareOverlayToCurrentDirectionCommand { get; }
     public ICommand SetupMountRiderAlignmentCommand { get; }
     public ICommand OpenMythicPackageViewerCommand { get; }
+    public ICommand ShowAnimationEditorCommand { get; }
+    public ICommand ShowAnimationBrowserCommand { get; }
 
     private readonly Dictionary<string, int> compareActionNameToIndex = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> compareDirectionNameToIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -192,8 +198,27 @@ public partial class MainWindowViewModel : ViewModelBase
         "Manual Frame"
     };
 
+
+    [ObservableProperty]
+    private bool animationBrowserVisible = false;
+
+    public bool ShowAnimationEditorPanel => !AnimationBrowserVisible;
+
+    [ObservableProperty]
+    private AnimationBrowserTileViewModel? selectedAnimationBrowserTile;
+
     [ObservableProperty]
     private string compareOverlaySyncMode = "Same Frame";
+
+    partial void OnSelectedAnimationBrowserTileChanged(AnimationBrowserTileViewModel? value)
+    {
+        if (syncingAnimationBrowserSelection)
+        {
+            return;
+        }
+
+        SelectAnimationFromBrowserTile(value);
+    }
 
     [ObservableProperty]
     private bool compareSideBySideEnabled = false;
@@ -672,6 +697,8 @@ public partial class MainWindowViewModel : ViewModelBase
         CopyPropPoseFromPreviousFrameCommand = new RelayCommand(CopyPropPoseFromPreviousFrame);
         ClearPropPoseForCurrentFrameCommand = new RelayCommand(ClearPropPoseForCurrentFrame);
         ClearCompareOverlayCommand = new RelayCommand(ClearCompareOverlay);
+        ShowAnimationEditorCommand = new RelayCommand(() => AnimationBrowserVisible = false);
+        ShowAnimationBrowserCommand = new RelayCommand(() => AnimationBrowserVisible = true);
         ToggleCompareOverlayDragModeCommand = new RelayCommand(() =>
         {
             CompareOverlayDragModeEnabled = !CompareOverlayDragModeEnabled;
@@ -988,6 +1015,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (ShowMulSlotView)
         {
             SelectedAnimation = null;
+            AnimationBrowserTiles.Clear();
             return;
         }
 
@@ -1083,6 +1111,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         StatusText = "Showing " + AnimationEntries.Count + " filtered animation bodies.";
+        if (AnimationBrowserVisible)
+        {
+            BuildAnimationBrowserTiles();
+        }
     }
 
     private IAnimationDataSource? GetDataSourceForEntry(AnimationEntry? entry)
@@ -1373,6 +1405,108 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedAnimationFile = "All Files";
         }
+    }
+
+    private void BuildAnimationBrowserTiles()
+    {
+        AnimationBrowserTiles.Clear();
+
+        foreach (AnimationEntry entry in AnimationEntries)
+        {
+            string key =
+                entry.SourceMode + "|" +
+                entry.SourceFile + "|" +
+                entry.BodyId;
+
+            if (!animationBrowserThumbnailCache.TryGetValue(key, out WriteableBitmap? thumbnail))
+            {
+                thumbnail = GenerateAnimationBrowserThumbnail(entry);
+                animationBrowserThumbnailCache[key] = thumbnail;
+            }
+
+            AnimationBrowserTiles.Add(new AnimationBrowserTileViewModel
+            {
+                SourceEntry = entry,
+                Thumbnail = thumbnail,
+                DisplayName = entry.DisplayName,
+                SecondaryText = entry.SecondaryText,
+                SourceText = entry.SourceMode + " | " + entry.SourceFile
+            });
+        }
+    }
+
+    partial void OnAnimationBrowserVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowAnimationEditorPanel));
+
+        if (value)
+        {
+            BuildAnimationBrowserTiles();
+        }
+    }
+
+    private WriteableBitmap? GenerateAnimationBrowserThumbnail(AnimationEntry entry)
+    {
+        try
+        {
+            IAnimationDataSource? dataSource = GetDataSourceForEntry(entry);
+            if (dataSource == null)
+            {
+                return null;
+            }
+
+            List<int> actions = dataSource.GetAvailableActionIndices(entry.BodyId);
+            if (actions.Count == 0)
+            {
+                actions.Add(0);
+            }
+
+            int[] preferredDirections =
+            {
+                1, // South
+                0, // East fallback
+                2,
+                3,
+                4
+            };
+
+            foreach (int actionIndex in actions)
+            {
+                foreach (int directionIndex in preferredDirections)
+                {
+                    DetachedPreviewLoadResult result = LoadDetachedPreview(
+                        entry,
+                        actionIndex,
+                        directionIndex);
+
+                    if (result.Success && result.Frames.Count > 0)
+                    {
+                        return result.Frames[0];
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore bad thumbnail entries.
+        }
+
+        return null;
+    }
+
+    private void SelectAnimationFromBrowserTile(AnimationBrowserTileViewModel? tile)
+    {
+        if (tile?.SourceEntry == null)
+        {
+            return;
+        }
+
+        AnimationEntry? match = AnimationEntries.FirstOrDefault(x =>
+            x.BodyId == tile.SourceEntry.BodyId &&
+            string.Equals(x.SourceFile, tile.SourceEntry.SourceFile, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.SourceMode, tile.SourceEntry.SourceMode, StringComparison.OrdinalIgnoreCase));
+
+        SelectedAnimation = match ?? tile.SourceEntry;
     }
 
     private void ApplyUopBodyFilters()

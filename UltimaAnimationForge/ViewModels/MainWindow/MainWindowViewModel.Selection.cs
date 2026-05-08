@@ -83,7 +83,26 @@ public partial class MainWindowViewModel
             LoadSelectedAnimationBlock();
             ResumePlaybackIfNeeded(resumePlayback);
         }
+        SyncAnimationBrowserSelection(value);
         detachedPreviewViewModel?.SyncFromMainIfFollowing();
+    }
+
+    private void SyncAnimationBrowserSelection(AnimationEntry? entry)
+    {
+        if (entry == null || AnimationBrowserTiles.Count == 0)
+        {
+            return;
+        }
+
+        syncingAnimationBrowserSelection = true;
+
+        SelectedAnimationBrowserTile = AnimationBrowserTiles.FirstOrDefault(x =>
+            x.SourceEntry != null &&
+            x.SourceEntry.BodyId == entry.BodyId &&
+            string.Equals(x.SourceEntry.SourceFile, entry.SourceFile, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.SourceEntry.SourceMode, entry.SourceMode, StringComparison.OrdinalIgnoreCase));
+
+        syncingAnimationBrowserSelection = false;
     }
 
     partial void OnSelectedActionChanged(string? value)
