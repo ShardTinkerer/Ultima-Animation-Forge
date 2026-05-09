@@ -285,13 +285,18 @@ public class MulAnimationDataSource : IAnimationDataSource
 
                 int bodyId = resolvedBodyId;
 
-                if (definition.FileType >= 2 && definition.FileType <= 5)
+                if (definition.FileType > 1)
                 {
                     int trueBodyId = bodyConvDefService.GetTrueBody(definition.FileType, resolvedBodyId);
-                    if (trueBodyId >= 0)
+
+                    // For anim2+ only show slots that are actually mapped by bodyconv.def.
+                    // Otherwise anim7/anim8/etc raw slot 0,1,2... will appear as duplicates of anim.mul.
+                    if (trueBodyId < 0)
                     {
-                        bodyId = trueBodyId;
+                        continue;
                     }
+
+                    bodyId = trueBodyId;
                 }
 
                 string entryKey = bodyId.ToString() + "|" + sourceFileName;
@@ -687,7 +692,7 @@ public class MulAnimationDataSource : IAnimationDataSource
                 continue;
             }
 
-            int trueBodyId = definition.FileType >= 1 && definition.FileType <= 5
+            int trueBodyId = definition.FileType > 1
                 ? bodyConvDefService.GetTrueBody(definition.FileType, bodyIndex)
                 : bodyIndex;
 

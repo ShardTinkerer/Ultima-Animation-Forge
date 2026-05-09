@@ -35,6 +35,8 @@ public class AnimationViewerProfile
 
 public class AnimationCacheData
 {
+    public int CacheVersion { get; set; } = 2;
+
     public string ProfileId { get; set; } = string.Empty;
     public string UoFolderPath { get; set; } = string.Empty;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;

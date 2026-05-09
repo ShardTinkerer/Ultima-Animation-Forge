@@ -10,6 +10,7 @@ namespace UltimaAnimationForge.Services;
 public class AnimationCacheService
 {
     private readonly string cacheFolderPath;
+    private const int CurrentCacheVersion = 2;
 
     public AnimationCacheService()
     {
@@ -76,6 +77,11 @@ public class AnimationCacheService
             return false;
         }
 
+        if (cacheData.CacheVersion != CurrentCacheVersion)
+        {
+            return false;
+        }
+
         if (!string.Equals(
                 NormalizePath(cacheData.UoFolderPath),
                 NormalizePath(folderPath),
@@ -133,14 +139,15 @@ public class AnimationCacheService
     {
         return new AnimationCacheData
         {
+            CacheVersion = CurrentCacheVersion,
             ProfileId = profileId,
             UoFolderPath = folderPath,
             CreatedUtc = DateTime.UtcNow,
             SourceFiles = BuildSourceFileStamps(folderPath),
             AnimationEntries = animationEntries
-    .Where(x => !string.Equals(x.SourceMode, "UOP", StringComparison.OrdinalIgnoreCase))
-    .Select(CloneAnimationEntry)
-    .ToList(),
+                .Where(x => !string.Equals(x.SourceMode, "UOP", StringComparison.OrdinalIgnoreCase))
+                .Select(CloneAnimationEntry)
+                .ToList(),
             MulSlotEntries = mulSlotEntries.Select(CloneMulSlotEntry).ToList()
         };
     }
