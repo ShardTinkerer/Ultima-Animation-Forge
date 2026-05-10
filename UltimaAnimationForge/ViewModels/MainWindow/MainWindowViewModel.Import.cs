@@ -20,6 +20,13 @@ namespace UltimaAnimationForge.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    public bool CanAcceptDroppedVdForSelectedMulSlot()
+    {
+        return ShowMulSlotView &&
+               !IsSelectedAnimationFileUop() &&
+               SelectedMulSlot != null;
+    }
+
     private sealed class CreateLegacyMulIdxDialogResult
     {
         public bool Confirmed { get; set; }
@@ -851,17 +858,33 @@ public partial class MainWindowViewModel
 
         if (importedTargetSlot.FileType >= 2)
         {
-            Window? mainWindow = GetMainWindow();
-            if (mainWindow == null)
+            BodyAssignmentDialogResult? assignmentResult = null;
+
+            if (TryParseVdFileNameAssignment(vdPath, out VdFileNameAssignment? parsedAssignment) &&
+                parsedAssignment != null)
             {
-                StatusText = "Could not locate main window.";
-                return;
+                assignmentResult = new BodyAssignmentDialogResult
+                {
+                    Confirmed = true,
+                    BodyId = parsedAssignment.BodyId,
+                    MobType = parsedAssignment.MobType,
+                    Comment = parsedAssignment.Comment
+                };
             }
+            else
+            {
+                Window? mainWindow = GetMainWindow();
+                if (mainWindow == null)
+                {
+                    StatusText = "Could not locate main window.";
+                    return;
+                }
 
-            string bodyConvPath = Path.Combine(currentFolderPath, "bodyconv.def");
+                string bodyConvPath = Path.Combine(currentFolderPath, "bodyconv.def");
 
-            BodyAssignmentDialogResult? assignmentResult =
-                await ShowBodyAssignmentDialogAsync(mainWindow, importedTargetSlot, bodyConvPath);
+                assignmentResult =
+                    await ShowBodyAssignmentDialogAsync(mainWindow, importedTargetSlot, bodyConvPath);
+            }
 
             if (assignmentResult == null || !assignmentResult.Confirmed)
             {
@@ -884,10 +907,132 @@ public partial class MainWindowViewModel
         RefreshUnsavedChangesState();
 
         StatusText =
-            "Queued dropped VD import for " +
+            "Queued VD import for " +
             Path.GetFileName(plan.MulPath) +
             " slot " + importedTargetSlot.BodyIndex +
             ". Click Save Changes to write to disk.";
+    }
+
+    private static bool TryParseVdFileNameAssignment(string vdPath, out VdFileNameAssignment? assignment)
+    {
+        assignment = null;
+
+        string fileName = Path.GetFileNameWithoutExtension(vdPath).Trim();
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return false;
+        }
+
+        if (TryParseDoubleUnderscoreVdName(fileName, out assignment))
+        {
+            return true;
+        }
+
+        return TryParseSingleUnderscoreVdName(fileName, out assignment);
+    }
+
+    private static bool TryParseDoubleUnderscoreVdName(string fileName, out VdFileNameAssignment? assignment)
+    {
+        assignment = null;
+
+        string[] parts = fileName.Split(
+            new[] { "__" },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length != 3)
+        {
+            return false;
+        }
+
+        string comment = parts[0];
+        string mobType = NormalizeParsedMobType(parts[1]);
+
+        if (!IsValidParsedMobType(mobType))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[2], out int bodyId) || bodyId < 1)
+        {
+            return false;
+        }
+
+        assignment = new VdFileNameAssignment
+        {
+            BodyId = bodyId,
+            MobType = mobType,
+            Comment = comment
+        };
+
+        return !string.IsNullOrWhiteSpace(comment);
+    }
+
+    private static bool TryParseSingleUnderscoreVdName(string fileName, out VdFileNameAssignment? assignment)
+    {
+        assignment = null;
+
+        string[] validMobTypes =
+        {
+        "SEA_MONSTER",
+        "MONSTER",
+        "ANIMAL",
+        "HUMAN",
+        "EQUIPMENT"
+    };
+
+        foreach (string mobType in validMobTypes)
+        {
+            string marker = "_" + mobType + "_";
+            int markerIndex = fileName.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+
+            if (markerIndex < 0)
+            {
+                continue;
+            }
+
+            string comment = fileName.Substring(0, markerIndex).Trim('_', ' ');
+            string bodyText = fileName.Substring(markerIndex + marker.Length).Trim();
+
+            if (!int.TryParse(bodyText, out int bodyId) || bodyId < 1)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(comment))
+            {
+                continue;
+            }
+
+            assignment = new VdFileNameAssignment
+            {
+                BodyId = bodyId,
+                MobType = mobType,
+                Comment = comment
+            };
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string NormalizeParsedMobType(string value)
+    {
+        return (value ?? string.Empty)
+            .Trim()
+            .Replace(' ', '_')
+            .ToUpperInvariant();
+    }
+
+    private static bool IsValidParsedMobType(string mobType)
+    {
+        return
+            string.Equals(mobType, "MONSTER", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(mobType, "SEA_MONSTER", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(mobType, "ANIMAL", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(mobType, "HUMAN", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(mobType, "EQUIPMENT", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task ImportVdToUopFromPathAsync(string vdPath)

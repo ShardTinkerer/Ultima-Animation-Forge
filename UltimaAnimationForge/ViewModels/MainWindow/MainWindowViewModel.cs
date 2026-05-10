@@ -414,6 +414,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool showMulSlotView = false;
 
+    [ObservableProperty]
+    private bool mulSlotShowHFilter = false;
+
+    [ObservableProperty]
+    private bool mulSlotShowLFilter = false;
+
+    [ObservableProperty]
+    private bool mulSlotShowPFilter = false;
+
     private readonly HueDataService hueDataService = new();
     private List<HueDataService.HueEntry> cachedHueEntries = new();
     private string currentHueFilePath = string.Empty;
@@ -1297,6 +1306,21 @@ public partial class MainWindowViewModel : ViewModelBase
             if (!matchesFile)
             {
                 continue;
+            }
+
+            bool anyTypeFilter = MulSlotShowHFilter || MulSlotShowLFilter || MulSlotShowPFilter;
+
+            if (anyTypeFilter)
+            {
+                bool matchesType =
+                    (MulSlotShowHFilter && string.Equals(entry.TypeLetter, "H", StringComparison.OrdinalIgnoreCase)) ||
+                    (MulSlotShowLFilter && string.Equals(entry.TypeLetter, "L", StringComparison.OrdinalIgnoreCase)) ||
+                    (MulSlotShowPFilter && string.Equals(entry.TypeLetter, "P", StringComparison.OrdinalIgnoreCase));
+
+                if (!matchesType)
+                {
+                    continue;
+                }
             }
 
             bool matchesSearch = true;

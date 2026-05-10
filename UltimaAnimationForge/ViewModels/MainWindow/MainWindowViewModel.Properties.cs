@@ -667,7 +667,7 @@ public partial class MainWindowViewModel
 
     public string SlotPaneTitle =>
         ShowMulSlotView
-            ? (IsSelectedAnimationFileUop() ? "UOP Body Targets" : "Free Body IDs")
+            ? (IsSelectedAnimationFileUop() ? "UOP Body Targets" : "BODY IDS")
             : "Animations";
 
     public string PreviewInfoText

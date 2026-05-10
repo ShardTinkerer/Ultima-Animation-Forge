@@ -18,12 +18,14 @@ namespace UltimaAnimationForge.Views;
 public partial class MainWindow : Window
 {
     private Border? previewDropBorder;
+    private ListBox? mulSlotListBox;
 
     public MainWindow()
     {
         InitializeComponent();
 
         previewDropBorder = this.FindControl<Border>("PreviewDropBorder");
+        mulSlotListBox = this.FindControl<ListBox>("MulSlotListBox");
 
         Opened += async (_, _) =>
         {
@@ -40,6 +42,12 @@ public partial class MainWindow : Window
         {
             DragDrop.AddDragOverHandler(previewDropBorder, OnPreviewDragOver);
             DragDrop.AddDropHandler(previewDropBorder, OnPreviewDrop);
+        }
+
+        if (mulSlotListBox != null)
+        {
+            DragDrop.AddDragOverHandler(mulSlotListBox, OnMulSlotDragOver);
+            DragDrop.AddDropHandler(mulSlotListBox, OnMulSlotDrop);
         }
     }
 
@@ -500,5 +508,46 @@ public partial class MainWindow : Window
         okButton.Click += (_, _) => dialog.Close();
 
         await dialog.ShowDialog(this);
+    }
+
+    private void OnMulSlotDragOver(object? sender, DragEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        if (!viewModel.CanAcceptDroppedVdForSelectedMulSlot())
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        List<string> paths = GetDroppedLocalPaths(e);
+
+        bool hasVd =
+            paths.Count > 0 &&
+            paths.Any(path => path.EndsWith(".vd", StringComparison.OrdinalIgnoreCase));
+
+        e.DragEffects = hasVd ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void OnMulSlotDrop(object? sender, DragEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        List<string> paths = GetDroppedLocalPaths(e);
+        if (paths.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.HandleDroppedFilesAsync(paths);
+        e.Handled = true;
     }
 }

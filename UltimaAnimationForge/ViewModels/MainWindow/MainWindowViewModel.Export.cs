@@ -26,6 +26,13 @@ namespace UltimaAnimationForge.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    private sealed class VdFileNameAssignment
+    {
+        public int BodyId { get; set; }
+        public string MobType { get; set; } = "MONSTER";
+        public string Comment { get; set; } = string.Empty;
+    }
+
     private enum ExportMode
     {
         CurrentFrame,

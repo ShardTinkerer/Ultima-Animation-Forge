@@ -105,6 +105,21 @@ public partial class MainWindowViewModel
         syncingAnimationBrowserSelection = false;
     }
 
+    partial void OnMulSlotShowHFilterChanged(bool value)
+    {
+        ApplyMulSlotFilters();
+    }
+
+    partial void OnMulSlotShowLFilterChanged(bool value)
+    {
+        ApplyMulSlotFilters();
+    }
+
+    partial void OnMulSlotShowPFilterChanged(bool value)
+    {
+        ApplyMulSlotFilters();
+    }
+
     partial void OnSelectedActionChanged(string? value)
     {
         if (suppressActionReload)

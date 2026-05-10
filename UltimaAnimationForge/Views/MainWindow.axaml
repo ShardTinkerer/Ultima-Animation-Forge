@@ -365,22 +365,34 @@
                             Margin="0,0,8,0" />
 
                     <Menu Background="Transparent"
-                          IsVisible="{Binding ShowAnimationOnlyControls}">
+                          IsVisible="{Binding ShowAnimationEditorPanel}">
                         <MenuItem Header="Edit ▼"
                                   Classes="topAction">
+
                             <MenuItem Header="MUL Slot View"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding ShowMulSlotView, Mode=TwoWay}" />
-                            <MenuItem Header="Replace Frame"
-                                      Command="{Binding ReplaceSelectedFrameCommand}" />
-                            <MenuItem Header="Remove Frame"
-                                      Command="{Binding RemoveSelectedFrameCommand}" />
-                            <MenuItem Header="Import PNG Sequence"
-                                      Command="{Binding ImportPngSequenceCommand}" />
+
                             <Separator />
+
+                            <MenuItem Header="Replace Frame"
+                                      Command="{Binding ReplaceSelectedFrameCommand}"
+                                      IsVisible="{Binding ShowAnimationView}" />
+
+                            <MenuItem Header="Remove Frame"
+                                      Command="{Binding RemoveSelectedFrameCommand}"
+                                      IsVisible="{Binding ShowAnimationView}" />
+
+                            <MenuItem Header="Import PNG Sequence"
+                                      Command="{Binding ImportPngSequenceCommand}"
+                                      IsVisible="{Binding ShowAnimationView}" />
+
+                            <Separator IsVisible="{Binding ShowAnimationView}" />
+
                             <MenuItem Header="Undo"
                                       Command="{Binding UndoFrameEditCommand}"
-                                      IsEnabled="{Binding CanUndoFrameEdit}" />
+                                      IsEnabled="{Binding CanUndoFrameEdit}"
+                                      IsVisible="{Binding ShowAnimationView}" />
                         </MenuItem>
                     </Menu>
 
@@ -941,7 +953,7 @@
                     BorderBrush="#343B46"
                     BorderThickness="0,0,1,0"
                     Padding="10">
-                <Grid RowDefinitions="Auto,Auto,*">
+                <Grid RowDefinitions="Auto,Auto,Auto,*">
                     <TextBlock Grid.Row="0"
                                Text="Animations"
                                FontSize="16"
@@ -961,7 +973,28 @@
                              Text="{Binding SearchText}"
                              Margin="0,0,0,10" />
 
-                    <Grid Grid.Row="2">
+                    <WrapPanel Grid.Row="2"
+                               Margin="0,0,0,10"
+                               IsVisible="{Binding ShowMulSlotList}"
+                               VerticalAlignment="Center">
+                        <TextBlock Text="Show:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Foreground="#D5DCE4" />
+
+                        <CheckBox Content="H"
+                                  IsChecked="{Binding MulSlotShowHFilter}"
+                                  Margin="0,0,10,0" />
+
+                        <CheckBox Content="L"
+                                  IsChecked="{Binding MulSlotShowLFilter}"
+                                  Margin="0,0,10,0" />
+
+                        <CheckBox Content="P"
+                                  IsChecked="{Binding MulSlotShowPFilter}" />
+                    </WrapPanel>
+
+                    <Grid Grid.Row="3">
                         <ListBox ItemsSource="{Binding AnimationEntries}"
                                  SelectedItem="{Binding SelectedAnimation}"
                                  IsVisible="{Binding ShowAnimationView}">
@@ -991,7 +1024,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox ItemsSource="{Binding MulSlotEntries}"
+                        <ListBox Name="MulSlotListBox"
+                                 ItemsSource="{Binding MulSlotEntries}"
                                  SelectedItem="{Binding SelectedMulSlot}"
                                  IsVisible="{Binding ShowMulSlotList}">
                             <ListBox.ItemTemplate>
