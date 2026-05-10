@@ -10,7 +10,7 @@ namespace UltimaAnimationForge.Services;
 public class AnimationCacheService
 {
     private readonly string cacheFolderPath;
-    private const int CurrentCacheVersion = 2;
+    private const int CurrentCacheVersion = 3;
 
     public AnimationCacheService()
     {

@@ -276,7 +276,7 @@ public partial class MainWindowViewModel
             VdExportTargetType.Animal13 => 1,
             VdExportTargetType.Monster22 => 0,
             VdExportTargetType.Human35 => 2,
-            _ => VdExportService.GetAnimTypeFromActionCount(discoveredActionCount)
+            _ => 4
         };
     }
 
@@ -1249,30 +1249,32 @@ public partial class MainWindowViewModel
             return;
         }
 
-        List<int> availableActions = dataSource.GetAvailableActionIndices(bodyId)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
+        int vdActionCount;
 
-        if (availableActions.Count == 0)
+        if (isUopExport)
         {
-            int fallbackActionCount = dataSource.GetGroupCountForBody(bodyId);
-
-            for (int actionIndex = 0; actionIndex < fallbackActionCount; actionIndex++)
+            vdActionCount = vdExportTargetType switch
             {
-                availableActions.Add(actionIndex);
-            }
+                VdExportTargetType.Animal13 => 13,
+                VdExportTargetType.Monster22 => 22,
+                VdExportTargetType.Human35 => 35,
+                _ => 32
+            };
+        }
+        else
+        {
+            vdActionCount = dataSource.GetGroupCountForBody(bodyId);
         }
 
-        if (availableActions.Count == 0)
+        if (vdActionCount != 13 && vdActionCount != 22 && vdActionCount != 32 && vdActionCount != 35)
         {
-            StatusText = "No actions available to export.";
+            StatusText = "Unsupported VD action count: " + vdActionCount + ".";
             return;
         }
 
         Dictionary<int, Dictionary<int, List<VdFrameData>>> exportData = new();
 
-        foreach (int actionIndex in availableActions)
+        for (int actionIndex = 0; actionIndex < vdActionCount; actionIndex++)
         {
             Dictionary<int, List<VdFrameData>> directionMap = new Dictionary<int, List<VdFrameData>>();
 
@@ -1332,9 +1334,7 @@ public partial class MainWindowViewModel
         Dictionary<int, Dictionary<int, List<VdFrameData>>> finalExportData;
         short animType;
 
-        int discoveredActionCount = exportData.Keys.Count > 0
-            ? (exportData.Keys.Max() + 1)
-            : 0;
+        int discoveredActionCount = vdActionCount;
 
         if (isUopExport)
         {

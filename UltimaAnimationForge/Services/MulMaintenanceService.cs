@@ -156,11 +156,13 @@ public sealed class MulSlotDeleteService
                     : 35000 + ((bodyIndex - 400) * 175),
 
             // anim, anim6, anim7, anim8, etc. use standard CUO layout
-            _ => bodyIndex < 200
+            6 => bodyIndex < 200
                 ? bodyIndex * 110
                 : bodyIndex < 400
                     ? 22000 + ((bodyIndex - 200) * 65)
-                    : 35000 + ((bodyIndex - 400) * 175)
+                    : 35000 + ((bodyIndex - 400) * 175),
+
+            _ => bodyIndex * 110
         };
     }
 

@@ -740,7 +740,7 @@ public class MulAnimationDataSource : IAnimationDataSource
         return 10000 + Math.Abs(StringComparer.OrdinalIgnoreCase.GetHashCode(baseName));
     }
 
-    private int GetBaseIndexForBody(int fileType, int bodyIndex)
+    private static int GetBaseIndexForBody(int fileType, int bodyIndex)
     {
         return fileType switch
         {
@@ -766,11 +766,13 @@ public class MulAnimationDataSource : IAnimationDataSource
                     ? 22000 + ((bodyIndex - 200) * 65)
                     : 35000 + ((bodyIndex - 400) * 175),
 
-            _ => bodyIndex < 200
+            6 => bodyIndex < 200
                 ? bodyIndex * 110
                 : bodyIndex < 400
                     ? 22000 + ((bodyIndex - 200) * 65)
-                    : 35000 + ((bodyIndex - 400) * 175)
+                    : 35000 + ((bodyIndex - 400) * 175),
+
+            _ => bodyIndex * 110
         };
     }
 

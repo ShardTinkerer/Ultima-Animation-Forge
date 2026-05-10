@@ -30,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly Dictionary<string, WriteableBitmap?> animationBrowserThumbnailCache = new();
     private bool syncingAnimationBrowserSelection;
     private CancellationTokenSource? animationBrowserThumbnailCancellation;
+    public ICommand ClearSelectedMulSlotCommand { get; }
 
     [ObservableProperty]
     private string animationBrowserSortMode = "Body ID Asc";
@@ -813,6 +814,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ExportAnimationBrowserTileFramesCommand = new AsyncRelayCommand<AnimationBrowserTileViewModel?>(ExportAnimationBrowserTileFramesAsync);
         ExportAnimationBrowserTileVdCommand = new AsyncRelayCommand<AnimationBrowserTileViewModel?>(ExportAnimationBrowserTileVdAsync);
         DeleteAnimationBrowserTileCommand = new AsyncRelayCommand<AnimationBrowserTileViewModel?>(DeleteAnimationBrowserTileAsync);
+        ClearSelectedMulSlotCommand = new AsyncRelayCommand(ClearSelectedMulSlotAsync);
 
         TogglePreviewDragModeCommand = new RelayCommand(() =>
         {
@@ -2583,5 +2585,58 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await dialog.ShowDialog(owner);
         return confirmed;
+    }
+
+    private async Task ClearSelectedMulSlotAsync()
+    {
+        if (!ShowMulSlotView)
+        {
+            StatusText = "Switch to BODY IDS view first.";
+            return;
+        }
+
+        if (SelectedMulSlot == null)
+        {
+            StatusText = "Select a BODY ID slot first.";
+            return;
+        }
+
+        string currentFolderPath = GetCurrentFolderPath();
+
+        if (string.IsNullOrWhiteSpace(currentFolderPath) || !Directory.Exists(currentFolderPath))
+        {
+            StatusText = "Open a valid UO folder first.";
+            return;
+        }
+
+        MulSlotDeleteService.DeleteResult result =
+            mulSlotDeleteService.DeleteBodySlot(
+                currentFolderPath,
+                SelectedMulSlot.FileName,
+                SelectedMulSlot.FileType,
+                SelectedMulSlot.BodyIndex,
+                SelectedMulSlot.AnimLength);
+
+        StatusText = result.Message;
+
+        if (!result.Success)
+        {
+            return;
+        }
+
+        int clearedBodyIndex = SelectedMulSlot.BodyIndex;
+        int clearedTrueBodyId = SelectedMulSlot.TrueBodyId;
+        string clearedFileName = SelectedMulSlot.FileName;
+
+        pendingMulImportSession?.Clear();
+        animationCacheService.DeleteAllCaches();
+
+        ReloadAnimationSourcesAndLists();
+        RefreshUnsavedChangesState();
+
+        StatusText =
+            "Cleared " + clearedFileName +
+            " body index " + clearedBodyIndex +
+            " / true body " + clearedTrueBodyId + ".";
     }
 }
