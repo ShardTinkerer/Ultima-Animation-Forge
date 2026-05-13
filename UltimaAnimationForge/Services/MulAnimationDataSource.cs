@@ -744,6 +744,13 @@ public class MulAnimationDataSource : IAnimationDataSource
     {
         return fileType switch
         {
+            // anim.mul standard layout
+            1 => bodyIndex < 200
+                ? bodyIndex * 110
+                : bodyIndex < 400
+                    ? 22000 + ((bodyIndex - 200) * 65)
+                    : 35000 + ((bodyIndex - 400) * 175),
+
             2 => bodyIndex < 200
                 ? bodyIndex * 110
                 : 22000 + ((bodyIndex - 200) * 65),
@@ -772,7 +779,12 @@ public class MulAnimationDataSource : IAnimationDataSource
                     ? 22000 + ((bodyIndex - 200) * 65)
                     : 35000 + ((bodyIndex - 400) * 175),
 
-            _ => bodyIndex * 110
+            // anim7+ standard CUO-style layout
+            _ => bodyIndex < 200
+                ? bodyIndex * 110
+                : bodyIndex < 400
+                    ? 22000 + ((bodyIndex - 200) * 65)
+                    : 35000 + ((bodyIndex - 400) * 175)
         };
     }
 
