@@ -32,6 +32,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private CancellationTokenSource? animationBrowserThumbnailCancellation;
     public ICommand ClearSelectedMulSlotCommand { get; }
 
+    private sealed class PropCropDialogResult
+    {
+        public bool Confirmed { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public bool TrimTransparentBorder { get; set; } = true;
+        public bool TreatMagentaAsTransparent { get; set; } = true;
+        public bool TreatWhiteAsTransparent { get; set; } = true;
+        public byte WhiteTolerance { get; set; } = 18;
+    }
+
     [ObservableProperty]
     private string animationBrowserSortMode = "Body ID Asc";
 

@@ -2552,14 +2552,14 @@ public partial class MainWindowViewModel
         IReadOnlyList<IStorageFile> files = await mainWindow.StorageProvider.OpenFilePickerAsync(
             new FilePickerOpenOptions
             {
-                Title = "Choose Prop PNG",
+                Title = "Choose Prop Image",
                 AllowMultiple = false,
                 FileTypeFilter = new[]
                 {
-                    new FilePickerFileType("PNG Image")
-                    {
-                        Patterns = new[] { "*.png" }
-                    }
+                new FilePickerFileType("Image files")
+                {
+                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif" }
+                }
                 }
             });
 
@@ -2569,30 +2569,427 @@ public partial class MainWindowViewModel
             return;
         }
 
-        string? pngPath = files[0].TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(pngPath))
+        string? imagePath = files[0].TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(imagePath))
         {
-            StatusText = "Selected PNG does not have a local path.";
+            StatusText = "Selected image does not have a local path.";
             return;
         }
 
-        WriteableBitmap? bitmap = await LoadBitmapFromStorageFileAsync(files[0]);
-        if (bitmap == null)
+        WriteableBitmap? sourceBitmap = await LoadBitmapFromStorageFileAsync(files[0]);
+        if (sourceBitmap == null)
         {
-            StatusText = "Failed to load prop PNG.";
+            StatusText = "Failed to load prop image.";
             return;
         }
 
-        loadedPropOverlayBitmap = bitmap;
-        loadedPropOverlayPath = pngPath;
-        PropOverlayFileName = Path.GetFileName(pngPath);
+        WriteableBitmap? croppedBitmap = await ShowPropCropDialogAsync(
+            mainWindow,
+            sourceBitmap,
+            Path.GetFileName(imagePath));
+
+        if (croppedBitmap == null)
+        {
+            StatusText = "Prop crop cancelled.";
+            return;
+        }
+
+        loadedPropOverlayBitmap = croppedBitmap;
+        loadedPropOverlayPath = imagePath;
+        PropOverlayFileName = Path.GetFileName(imagePath);
         PropOverlayEnabled = true;
 
         OnPropertyChanged(nameof(HasPropOverlayLoaded));
         OnPropertyChanged(nameof(PropOverlaySummaryText));
 
         RefreshLivePreviewImage();
-        StatusText = "Loaded prop overlay: " + PropOverlayFileName + ".";
+        StatusText = "Loaded cropped prop overlay: " + PropOverlayFileName + ".";
+    }
+
+    private async Task<WriteableBitmap?> ShowPropCropDialogAsync(
+    Window owner,
+    WriteableBitmap sourceBitmap,
+    string displayName)
+    {
+        int imageWidth = sourceBitmap.PixelSize.Width;
+        int imageHeight = sourceBitmap.PixelSize.Height;
+
+        Window dialog = new Window
+        {
+            Title = "Crop Prop Image - " + displayName,
+            Width = 560,
+            Height = 640,
+            MinWidth = 520,
+            MinHeight = 520,
+            CanResize = true,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+
+        NumericUpDown xBox = new NumericUpDown
+        {
+            Minimum = 0,
+            Maximum = Math.Max(0, imageWidth - 1),
+            Increment = 1,
+            Value = 0,
+            Width = 120
+        };
+
+        NumericUpDown yBox = new NumericUpDown
+        {
+            Minimum = 0,
+            Maximum = Math.Max(0, imageHeight - 1),
+            Increment = 1,
+            Value = 0,
+            Width = 120
+        };
+
+        NumericUpDown widthBox = new NumericUpDown
+        {
+            Minimum = 1,
+            Maximum = imageWidth,
+            Increment = 1,
+            Value = imageWidth,
+            Width = 120
+        };
+
+        NumericUpDown heightBox = new NumericUpDown
+        {
+            Minimum = 1,
+            Maximum = imageHeight,
+            Increment = 1,
+            Value = imageHeight,
+            Width = 120
+        };
+
+        CheckBox trimTransparentBorderCheckBox = new CheckBox
+        {
+            Content = "Trim empty transparent border after crop",
+            IsChecked = true
+        };
+
+        CheckBox magentaTransparentCheckBox = new CheckBox
+        {
+            Content = "Treat pure magenta as transparent",
+            IsChecked = true
+        };
+
+        CheckBox whiteTransparentCheckBox = new CheckBox
+        {
+            Content = "Treat white background as transparent",
+            IsChecked = true
+        };
+
+        TextBlock infoText = new TextBlock
+        {
+            Text = "Image size: " + imageWidth + " x " + imageHeight,
+            FontWeight = FontWeight.SemiBold
+        };
+
+        TextBlock previewText = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+
+        TextBlock warningText = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = Brushes.OrangeRed,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+
+        Button cropButton = new Button
+        {
+            Content = "Crop",
+            Width = 90
+        };
+
+        Button cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 90
+        };
+
+        PropCropDialogResult? result = null;
+
+        Grid MakeRow(string label, Control control)
+        {
+            Grid grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("160,*"),
+                ColumnSpacing = 12
+            };
+
+            TextBlock labelBlock = new TextBlock
+            {
+                Text = label,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            Grid.SetColumn(labelBlock, 0);
+            Grid.SetColumn(control, 1);
+
+            grid.Children.Add(labelBlock);
+            grid.Children.Add(control);
+
+            return grid;
+        }
+
+        void UpdatePreview()
+        {
+            int x = (int)(xBox.Value ?? 0);
+            int y = (int)(yBox.Value ?? 0);
+            int width = (int)(widthBox.Value ?? 1);
+            int height = (int)(heightBox.Value ?? 1);
+
+            int endX = x + width;
+            int endY = y + height;
+
+            bool fits =
+                x >= 0 &&
+                y >= 0 &&
+                width > 0 &&
+                height > 0 &&
+                endX <= imageWidth &&
+                endY <= imageHeight;
+
+            previewText.Text =
+                "Crop preview:" + Environment.NewLine +
+                "- X: " + x + Environment.NewLine +
+                "- Y: " + y + Environment.NewLine +
+                "- Width: " + width + Environment.NewLine +
+                "- Height: " + height + Environment.NewLine +
+                "- Area: X " + x + " to " + endX + ", Y " + y + " to " + endY + Environment.NewLine +
+                "- Trim transparent border: " + (trimTransparentBorderCheckBox.IsChecked == true ? "On" : "Off") + Environment.NewLine +
+                "- Magenta transparency: " + (magentaTransparentCheckBox.IsChecked == true ? "On" : "Off") + Environment.NewLine +
+                "- White background transparency: " + (whiteTransparentCheckBox.IsChecked == true ? "On" : "Off");
+
+            if (!fits)
+            {
+                warningText.Text = "Crop area is outside the image bounds.";
+                cropButton.IsEnabled = false;
+                return;
+            }
+
+            warningText.Text = string.Empty;
+            cropButton.IsEnabled = true;
+        }
+
+        void HookValueChanged(NumericUpDown box)
+        {
+            box.PropertyChanged += (_, args) =>
+            {
+                if (args.Property.Name == nameof(NumericUpDown.Value))
+                {
+                    UpdatePreview();
+                }
+            };
+        }
+
+        HookValueChanged(xBox);
+        HookValueChanged(yBox);
+        HookValueChanged(widthBox);
+        HookValueChanged(heightBox);
+
+        trimTransparentBorderCheckBox.IsCheckedChanged += (_, _) => UpdatePreview();
+        magentaTransparentCheckBox.IsCheckedChanged += (_, _) => UpdatePreview();
+        whiteTransparentCheckBox.IsCheckedChanged += (_, _) => UpdatePreview();
+
+        cropButton.Click += (_, _) =>
+        {
+            result = new PropCropDialogResult
+            {
+                Confirmed = true,
+                X = (int)(xBox.Value ?? 0),
+                Y = (int)(yBox.Value ?? 0),
+                Width = (int)(widthBox.Value ?? 1),
+                Height = (int)(heightBox.Value ?? 1),
+                TrimTransparentBorder = trimTransparentBorderCheckBox.IsChecked == true,
+                TreatMagentaAsTransparent = magentaTransparentCheckBox.IsChecked == true,
+                TreatWhiteAsTransparent = whiteTransparentCheckBox.IsChecked == true,
+                WhiteTolerance = 18
+            };
+
+            dialog.Close();
+        };
+
+        cancelButton.Click += (_, _) =>
+        {
+            result = null;
+            dialog.Close();
+        };
+
+        dialog.Content = new StackPanel
+        {
+            Margin = new Thickness(16),
+            Spacing = 10,
+            Children =
+        {
+            infoText,
+            MakeRow("Crop X", xBox),
+            MakeRow("Crop Y", yBox),
+            MakeRow("Crop Width", widthBox),
+            MakeRow("Crop Height", heightBox),
+            trimTransparentBorderCheckBox,
+            magentaTransparentCheckBox,
+            whiteTransparentCheckBox,
+            previewText,
+            warningText,
+            new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Spacing = 10,
+                Children =
+                {
+                    cancelButton,
+                    cropButton
+                }
+            }
+        }
+        };
+
+        UpdatePreview();
+
+        await dialog.ShowDialog(owner);
+
+        if (result == null || !result.Confirmed)
+        {
+            return null;
+        }
+
+        return CropPropBitmap(sourceBitmap, result);
+    }
+
+    private WriteableBitmap CropPropBitmap(WriteableBitmap sourceBitmap, PropCropDialogResult crop)
+    {
+        FramePixels sourcePixels = ReadWriteableBitmapPixels(sourceBitmap);
+
+        int x = Math.Clamp(crop.X, 0, Math.Max(0, sourcePixels.Width - 1));
+        int y = Math.Clamp(crop.Y, 0, Math.Max(0, sourcePixels.Height - 1));
+        int width = Math.Clamp(crop.Width, 1, sourcePixels.Width - x);
+        int height = Math.Clamp(crop.Height, 1, sourcePixels.Height - y);
+
+        byte[] croppedPixels = new byte[width * height * 4];
+
+        for (int row = 0; row < height; row++)
+        {
+            int srcOffset = (((y + row) * sourcePixels.Width) + x) * 4;
+            int dstOffset = (row * width) * 4;
+
+            Buffer.BlockCopy(
+                sourcePixels.Pixels,
+                srcOffset,
+                croppedPixels,
+                dstOffset,
+                width * 4);
+        }
+
+        if (crop.TreatMagentaAsTransparent)
+        {
+            for (int i = 0; i + 3 < croppedPixels.Length; i += 4)
+            {
+                byte b = croppedPixels[i + 0];
+                byte g = croppedPixels[i + 1];
+                byte r = croppedPixels[i + 2];
+
+                if (r == 255 && g == 0 && b == 255)
+                {
+                    croppedPixels[i + 0] = 0;
+                    croppedPixels[i + 1] = 0;
+                    croppedPixels[i + 2] = 0;
+                    croppedPixels[i + 3] = 0;
+                }
+            }
+        }
+
+        if (crop.TreatWhiteAsTransparent)
+        {
+            RemoveNearWhiteBackground(croppedPixels, crop.WhiteTolerance);
+        }
+
+        if (crop.TrimTransparentBorder)
+        {
+            return TrimTransparentBitmapPixels(width, height, croppedPixels);
+        }
+
+        return CreateWriteableBitmapFromPixels(width, height, croppedPixels);
+    }
+
+    private void RemoveNearWhiteBackground(byte[] pixels, byte tolerance)
+    {
+        for (int i = 0; i + 3 < pixels.Length; i += 4)
+        {
+            byte b = pixels[i + 0];
+            byte g = pixels[i + 1];
+            byte r = pixels[i + 2];
+
+            bool nearWhite =
+                r >= 255 - tolerance &&
+                g >= 255 - tolerance &&
+                b >= 255 - tolerance;
+
+            if (!nearWhite)
+            {
+                continue;
+            }
+
+            pixels[i + 0] = 0;
+            pixels[i + 1] = 0;
+            pixels[i + 2] = 0;
+            pixels[i + 3] = 0;
+        }
+    }
+
+    private WriteableBitmap TrimTransparentBitmapPixels(int width, int height, byte[] pixels)
+    {
+        int minX = width;
+        int minY = height;
+        int maxX = -1;
+        int maxY = -1;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int offset = ((y * width) + x) * 4;
+                byte alpha = pixels[offset + 3];
+
+                if (alpha == 0)
+                {
+                    continue;
+                }
+
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        }
+
+        if (maxX < 0 || maxY < 0)
+        {
+            return CreateWriteableBitmapFromPixels(1, 1, new byte[4]);
+        }
+
+        int outputWidth = (maxX - minX) + 1;
+        int outputHeight = (maxY - minY) + 1;
+        byte[] outputPixels = new byte[outputWidth * outputHeight * 4];
+
+        for (int y = 0; y < outputHeight; y++)
+        {
+            int srcOffset = (((minY + y) * width) + minX) * 4;
+            int dstOffset = (y * outputWidth) * 4;
+
+            Buffer.BlockCopy(
+                pixels,
+                srcOffset,
+                outputPixels,
+                dstOffset,
+                outputWidth * 4);
+        }
+
+        return CreateWriteableBitmapFromPixels(outputWidth, outputHeight, outputPixels);
     }
 
     private void ClearPropOverlay()
