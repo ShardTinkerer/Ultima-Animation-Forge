@@ -15,7 +15,10 @@ public partial class MainWindowViewModel
     {
         AnimationEditor = 0,
         AnimationBrowser = 1,
-        Gumps = 2
+        Gumps = 2,
+        TileData = 3,
+        Art = 4,
+        AnimData = 5
     }
 
     public string HeaderStatusText => ShowGumpEditorPanel ? GumpInfoText : StatusText;

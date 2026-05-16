@@ -28,12 +28,18 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool ShowAnimationEditorPanel => ActiveToolTab == MainToolTab.AnimationEditor;
     public bool ShowAnimationBrowserPanel => ActiveToolTab == MainToolTab.AnimationBrowser;
     public bool ShowGumpEditorPanel => ActiveToolTab == MainToolTab.Gumps;
+    public bool ShowTileDataPanel => ActiveToolTab == MainToolTab.TileData;
+    public bool ShowArtPanel => ActiveToolTab == MainToolTab.Art;
+    public bool ShowAnimDataPanel => ActiveToolTab == MainToolTab.AnimData;
 
     partial void OnActiveToolTabChanged(MainToolTab value)
     {
         OnPropertyChanged(nameof(ShowAnimationEditorPanel));
         OnPropertyChanged(nameof(ShowAnimationBrowserPanel));
         OnPropertyChanged(nameof(ShowGumpEditorPanel));
+        OnPropertyChanged(nameof(ShowTileDataPanel));
+        OnPropertyChanged(nameof(ShowArtPanel));
+        OnPropertyChanged(nameof(ShowAnimDataPanel));
 
         if (value == MainToolTab.AnimationBrowser)
         {
@@ -55,7 +61,26 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             InitializeGumpsForCurrentFolder();
         }
+
+        if (value == MainToolTab.TileData && TileDataEntries.Count == 0)
+        {
+            LoadTileData();
+        }
+
+        if (value == MainToolTab.Art && ArtEntries.Count == 0)
+        {
+            LoadArtTab();
+        }
+
+        if (value == MainToolTab.AnimData && AnimDataEntries.Count == 0)
+        {
+            LoadAnimDataTab();
+        }
     }
+
+    public ICommand ShowTileDataCommand { get; }
+    public ICommand ShowArtCommand { get; }
+    public ICommand ShowAnimDataCommand { get; }
 
     [ObservableProperty]
     private string outputFolderPath = string.Empty;
@@ -876,6 +901,9 @@ public partial class MainWindowViewModel : ViewModelBase
         CopyComparePoseFromPreviousFrameCommand = new RelayCommand(CopyComparePoseFromPreviousFrame);
         ClearComparePoseForCurrentFrameCommand = new RelayCommand(ClearComparePoseForCurrentFrame);
         SetupMountRiderAlignmentCommand = new RelayCommand(SetupMountRiderAlignment);
+        ShowTileDataCommand = new RelayCommand(() => ActiveToolTab = MainToolTab.TileData);
+        ShowArtCommand = new RelayCommand(() => ActiveToolTab = MainToolTab.Art);
+        ShowAnimDataCommand = new RelayCommand(() => ActiveToolTab = MainToolTab.AnimData);
 
         ToggleCheckerCommand = new RelayCommand(() => ShowCheckerBackground = !ShowCheckerBackground);
         ToggleLoopCommand = new RelayCommand(() => LoopPlayback = !LoopPlayback);

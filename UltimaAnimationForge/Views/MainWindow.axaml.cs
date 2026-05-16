@@ -550,4 +550,13 @@ public partial class MainWindow : Window
         await viewModel.HandleDroppedFilesAsync(paths);
         e.Handled = true;
     }
+
+    private void TileDataEditField_LostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is UltimaAnimationForge.ViewModels.MainWindowViewModel vm &&
+            vm.SelectedTileDataEntry != null)
+        {
+            vm.SelectedTileDataEntry.IsEdited = true;
+        }
+    }
 }

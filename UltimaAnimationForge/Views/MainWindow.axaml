@@ -12,7 +12,7 @@
         Background="#1B1F25"
         Foreground="White"
         RequestedThemeVariant="Dark"
-        Title="Ultima Animation Forge Alpha 16"
+        Title="Ultima Animation Forge Alpha 17"
         DragDrop.AllowDrop="True"
         mc:Ignorable="d">
 
@@ -402,6 +402,24 @@
 
                     <Button Content="Gumps"
                             Command="{Binding ShowGumpEditorCommand}"
+                            CornerRadius="0"
+                            Padding="14,6"
+                            MinHeight="28" />
+
+                    <Button Content="TileData"
+                            Command="{Binding ShowTileDataCommand}"
+                            CornerRadius="0"
+                            Padding="14,6"
+                            MinHeight="28" />
+
+                    <Button Content="Art"
+                            Command="{Binding ShowArtCommand}"
+                            CornerRadius="0"
+                            Padding="14,6"
+                            MinHeight="28" />
+
+                    <Button Content="AnimData"
+                            Command="{Binding ShowAnimDataCommand}"
                             CornerRadius="0"
                             Padding="14,6"
                             MinHeight="28" />
@@ -1777,6 +1795,824 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- Tiledata Tab -->
+                <Grid Grid.Column="0"
+                      Grid.ColumnSpan="2"
+                      IsVisible="{Binding ShowTileDataPanel}"
+                      Margin="-294,0,0,0"
+                      RowDefinitions="Auto,*">
+
+                    <Border Grid.Row="0"
+                            Background="#1E232A"
+                            BorderBrush="#343B46"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <CheckBox Content="Land"
+                                      IsChecked="{Binding ShowLandTileData}" />
+
+                            <CheckBox Content="Items"
+                                      IsChecked="{Binding ShowItemTileData}" />
+
+                            <TextBox Width="220"
+                                     Watermark="Search ID / name..."
+                                     Text="{Binding TileDataSearchText}" />
+
+
+                            <Button Content="Save TileData Changes"
+                                    Command="{Binding SaveTileDataChangesCommand}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="360,*"
+                          ColumnSpacing="10"
+                          Margin="10">
+
+                        <Border Grid.Column="0"
+                                Background="#20262E"
+                                BorderBrush="#343B46"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <ListBox ItemsSource="{Binding FilteredTileDataEntries}"
+                                     SelectedItem="{Binding SelectedTileDataEntry}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayText}"
+                                                   Foreground="#E4EAF2"
+                                                   Margin="6"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Background="#20262E"
+                                BorderBrush="#343B46"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12">
+                            <Grid ColumnDefinitions="280,*"
+                                  ColumnSpacing="12">
+
+                                <StackPanel Grid.Column="0"
+                                            Spacing="6">
+
+                                    <TextBlock Text="{Binding SelectedTileDataEntry.DisplayText}"
+                                               FontSize="18"
+                                               FontWeight="Bold"/>
+
+                                    <TextBlock Text="{Binding SelectedTileDataEntry.Flags, StringFormat='Flags: 0x{0:X16}'}"/>
+
+                                    <TextBlock Text="Name"/>
+                                    <TextBox Text="{Binding SelectedTileDataEntry.Name, Mode=TwoWay}"
+                                             LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Animation/Gump"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Animation, Mode=TwoWay}"
+                                                   Minimum="-32768"
+                                                   Maximum="32767"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Weight"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Weight, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Quality/Layer/Light"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Quality, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Quantity"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Quantity, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Hue"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Hue, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Stack Offset"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.StackingOffset, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Value"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Value, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Height"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Height, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="MiscData"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.MiscData, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="65535"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Unk2"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Unknown2, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+
+                                    <TextBlock Text="Unk3"/>
+                                    <NumericUpDown Value="{Binding SelectedTileDataEntry.Unknown3, Mode=TwoWay}"
+                                                   Minimum="0"
+                                                   Maximum="255"
+                                                   LostFocus="TileDataEditField_LostFocus"/>
+                                </StackPanel>
+
+                                <Border Grid.Column="1"
+                                        Background="#151A20"
+                                        BorderBrush="#343B46"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="8">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding SelectedTileDataFlagOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Width="150"
+                                                              Margin="2"
+                                                              Content="{Binding Name}"
+                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                              Command="{Binding $parent[ItemsControl].DataContext.ToggleSelectedTileDataFlagCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- Art Tab -->
+                <Grid Grid.Column="0"
+                      Grid.ColumnSpan="2"
+                      IsVisible="{Binding ShowArtPanel}"
+                      Margin="-294,0,0,0"
+                      RowDefinitions="Auto,*">
+
+                    <Border Grid.Row="0"
+                            Background="#1E232A"
+                            BorderBrush="#343B46"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <Button Content="Load Art"
+                                    Command="{Binding LoadArtTabCommand}" />
+
+
+                            <Button Content="Import Selected"
+                                    Command="{Binding ImportSelectedArtCommand}" />
+
+                            <Button Content="Mass Import"
+                                    Command="{Binding MassImportArtCommand}" />
+
+                            <Button Content="Export Selected"
+                                    Command="{Binding ExportSelectedArtCommand}" />
+
+                            <Button Content="Mass Export"
+                                    Command="{Binding MassExportArtCommand}" />
+
+                            <Button Content="Check All"
+                                    Command="{Binding CheckAllArtCommand}" />
+
+                            <Button Content="Uncheck All"
+                                    Command="{Binding UncheckAllArtCommand}" />
+
+                            <Button Content="Save Art Changes"
+                                    Command="{Binding SaveArtChangesCommand}" />
+
+                            <TextBlock Text="{Binding ArtStatusText}"
+                                       VerticalAlignment="Center"
+                                       Foreground="#C7D1DB" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="360,*,300"
+                          ColumnSpacing="10"
+                          Margin="10">
+
+                        <!-- Left: Filters + Art List -->
+                        <Grid Grid.Column="0"
+                              RowDefinitions="Auto,*"
+                              RowSpacing="8">
+
+                            <Border Grid.Row="0"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="8">
+                                <StackPanel Spacing="6">
+                                    <TextBox Watermark="Search ID / hex..."
+                                             Text="{Binding ArtSearchText}" />
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="12">
+                                        <CheckBox Content="Land"
+                                                  IsChecked="{Binding ShowLandArt}" />
+
+                                        <CheckBox Content="Statics"
+                                                  IsChecked="{Binding ShowStaticArt}" />
+
+                                        <CheckBox Content="ArtTiles"
+                                                  IsChecked="{Binding ShowArtThumbnails}" />
+
+                                        <CheckBox Content="Free Slots"
+                                                  IsChecked="{Binding ShowFreeArtSlots}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6">
+                                <ListBox ItemsSource="{Binding ArtEntries}"
+                                         SelectedItem="{Binding SelectedArtEntry}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="Auto,54,*"
+                                                  ColumnSpacing="8"
+                                                  Margin="6">
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding IsChecked}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,6,0"/>
+
+                                                <Border Grid.Column="1"
+                                                        Width="48"
+                                                        Height="48"
+                                                        Background="#151A20"
+                                                        BorderBrush="#343B46"
+                                                        BorderThickness="1">
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="Uniform"
+                                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="2"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayText}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#E4EAF2" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Grid>
+
+                        <!-- Middle: Preview -->
+                        <Grid Grid.Column="1"
+                              RowDefinitions="*,Auto"
+                              RowSpacing="10">
+
+                            <Border Grid.Row="0"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12">
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <Image Source="{Binding SelectedArtBitmap}"
+                                           Stretch="None"
+                                           RenderOptions.BitmapInterpolationMode="None"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                </ScrollViewer>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    IsVisible="{Binding ShowSelectedArtAnimDataPreview}"
+                                    Background="#151A20"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="8">
+                                <StackPanel Spacing="6">
+
+                                    <TextBlock Text="{Binding SelectedArtAnimDataEntry.SecondaryText}"
+                                               HorizontalAlignment="Center"
+                                               Foreground="#C7D1DB"
+                                               FontWeight="SemiBold"/>
+
+                                    <Button Content="{Binding ArtAnimDataPlayButtonText}"
+                                            Command="{Binding ToggleArtAnimDataPlaybackCommand}"
+                                            HorizontalAlignment="Center"
+                                            MinWidth="80"/>
+
+                                    <ItemsControl ItemsSource="{Binding SelectedArtAnimDataFrames}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            Spacing="8"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="58"
+                                                        Height="70"
+                                                        Background="#20262E"
+                                                        BorderBrush="#343B46"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="4">
+                                                    <StackPanel>
+                                                        <Image Source="{Binding Bitmap}"
+                                                               Width="42"
+                                                               Height="42"
+                                                               Stretch="Uniform"
+                                                               RenderOptions.BitmapInterpolationMode="None"/>
+
+                                                        <TextBlock Text="{Binding FrameIndex}"
+                                                                   HorizontalAlignment="Center"
+                                                                   Foreground="#E4EAF2"
+                                                                   FontSize="11"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Right: Art Info + TileData Info -->
+                        <Border Grid.Column="2"
+                                Background="#20262E"
+                                BorderBrush="#343B46"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="12">
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Art Info"
+                                                   FontWeight="Bold"
+                                                   Foreground="#E4EAF2" />
+
+                                        <TextBlock Text="{Binding SelectedArtEntry.DisplayText}"
+                                                   Foreground="#C7D1DB"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SelectedArtEntry.SecondaryText}"
+                                                   Foreground="#AAB4C0"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <Border Height="1"
+                                            Background="#343B46"
+                                            Margin="0,4"/>
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="TileData Info"
+                                                   FontWeight="Bold"
+                                                   Foreground="#E4EAF2" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.DisplayText}"
+                                                   Foreground="#C7D1DB"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Flags, StringFormat='Flags: 0x{0:X16}'}"
+                                                   Foreground="#AAB4C0"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.TextureId, StringFormat='Texture ID: {0}'}"
+                                                   Foreground="#AAB4C0" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataFlagNames, StringFormat='Flag Names: {0}'}"
+                                                   Foreground="#AAB4C0"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SelectedArtAnimationGumpText}"
+                                                   Foreground="#AAB4C0"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Weight, StringFormat='Weight: {0}'}"
+                                                   Foreground="#AAB4C0" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Height, StringFormat='Height: {0}'}"
+                                                   Foreground="#AAB4C0" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Hue, StringFormat='Hue: {0}'}"
+                                                   Foreground="#AAB4C0" />
+
+                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.StackingOffset, StringFormat='Stack Offset: {0}'}"
+                                                   Foreground="#AAB4C0" />
+                                    </StackPanel>
+
+                                    <Border Height="1"
+                                            Background="#343B46"
+                                            Margin="0,8,0,4"/>
+
+                                    <StackPanel Spacing="4"
+                                                IsVisible="{Binding ShowSelectedArtEquipmentGump}">
+                                        <TextBlock Text="Equipment Gump"
+                                                   FontWeight="Bold"
+                                                   Foreground="#E4EAF2" />
+
+                                        <TextBlock Text="{Binding SelectedArtMaleEquipmentGumpText}"
+                                                   Foreground="#AAB4C0"
+                                                   TextWrapping="Wrap" />
+
+                                        <Border Background="#151A20"
+                                                BorderBrush="#343B46"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="8"
+                                                HorizontalAlignment="Left">
+                                            <Image Source="{Binding SelectedArtMaleEquipmentGumpBitmap}"
+                                                   Stretch="None"
+                                                   RenderOptions.BitmapInterpolationMode="None" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- AnimData Tab -->
+                <Grid Grid.Column="0"
+                      Grid.ColumnSpan="2"
+                      IsVisible="{Binding ShowAnimDataPanel}"
+                      Margin="-294,0,0,0"
+                      RowDefinitions="Auto,*">
+
+                    <Border Grid.Row="0"
+                            Background="#1E232A"
+                            BorderBrush="#343B46"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <Button Content="Load AnimData"
+                                    Command="{Binding LoadAnimDataTabCommand}" />
+
+                            <Button Content="Save AnimData"
+                                    Command="{Binding SaveAnimDataCommand}" />
+
+                            <Button Content="Export"
+                                    Command="{Binding ExportAnimDataCommand}" />
+
+                            <Button Content="Import"
+                                    Command="{Binding ImportAnimDataCommand}" />
+
+                            <Button Content="Check All"
+                                    Command="{Binding CheckAllAnimDataCommand}" />
+
+                            <Button Content="Uncheck All"
+                                    Command="{Binding UncheckAllAnimDataCommand}" />
+
+                            <TextBlock Text="{Binding AnimDataStatusText}"
+                                       VerticalAlignment="Center"
+                                       Foreground="#C7D1DB" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="380,*,330"
+                          ColumnSpacing="10"
+                          Margin="10">
+
+                        <!-- Left: Filters + AnimData List -->
+                        <Grid Grid.Column="0"
+                              RowDefinitions="Auto,*"
+                              RowSpacing="8">
+
+                            <Border Grid.Row="0"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="8">
+                                <StackPanel Spacing="6">
+                                    <TextBox Watermark="Search ID / hex / name..."
+                                             Text="{Binding AnimDataSearchText}" />
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="12">
+                                        <CheckBox Content="Missing Art"
+                                                  IsChecked="{Binding ShowAnimDataMissingArt}" />
+
+                                        <CheckBox Content="No Anim Flag"
+                                                  IsChecked="{Binding ShowAnimDataWithoutAnimationFlag}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6">
+                                <ListBox ItemsSource="{Binding AnimDataEntries}"
+                                         SelectedItem="{Binding SelectedAnimDataEntry}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  ColumnSpacing="8"
+                                                  Margin="6">
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding IsChecked}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,6,0" />
+
+                                                <StackPanel Grid.Column="1"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayText}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#E4EAF2" />
+
+                                                    <TextBlock Text="{Binding SecondaryText}"
+                                                               FontSize="12"
+                                                               Foreground="#AAB4C0"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Grid>
+
+                        <!-- Middle: Base + selected frame preview -->
+                        <Grid Grid.Column="1"
+                              RowDefinitions="*,Auto,*"
+                              RowSpacing="10">
+
+                            <Border Grid.Row="0"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12">
+                                <Grid RowDefinitions="Auto,*">
+                                    <TextBlock Grid.Row="0"
+                                               Text="Base Graphic"
+                                               FontWeight="Bold"
+                                               Foreground="#E4EAF2"
+                                               Margin="0,0,0,8" />
+
+                                    <ScrollViewer Grid.Row="1"
+                                                  HorizontalScrollBarVisibility="Auto"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <Image Source="{Binding SelectedAnimDataBaseBitmap}"
+                                               Stretch="None"
+                                               RenderOptions.BitmapInterpolationMode="None"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Height="1"
+                                    Background="#343B46" />
+
+                            <Border Grid.Row="2"
+                                    Background="#20262E"
+                                    BorderBrush="#343B46"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12">
+                                <Grid RowDefinitions="Auto,*">
+                                    <TextBlock Grid.Row="0"
+                                               Text="Selected Frame Graphic"
+                                               FontWeight="Bold"
+                                               Foreground="#E4EAF2"
+                                               Margin="0,0,0,8" />
+
+                                    <ScrollViewer Grid.Row="1"
+                                                  HorizontalScrollBarVisibility="Auto"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <Image Source="{Binding SelectedAnimDataFrameBitmap}"
+                                               Stretch="None"
+                                               RenderOptions.BitmapInterpolationMode="None"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Right: frame list + info -->
+                        <Border Grid.Column="2"
+                                Background="#20262E"
+                                BorderBrush="#343B46"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10">
+                            <Grid RowDefinitions="Auto,170,Auto,Auto,*"
+                                  RowSpacing="8">
+
+                                <StackPanel Grid.Row="0"
+                                            Spacing="4">
+                                    <TextBlock Text="AnimData Info"
+                                               FontWeight="Bold"
+                                               Foreground="#E4EAF2" />
+
+                                    <TextBlock Text="{Binding SelectedAnimDataEntry.DisplayText}"
+                                               Foreground="#C7D1DB"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Text="{Binding SelectedAnimDataEntry.SecondaryText}"
+                                               Foreground="#AAB4C0"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+
+                                    <Grid ColumnDefinitions="*,*"
+                                          RowDefinitions="Auto,Auto,Auto,Auto"
+                                          ColumnSpacing="8"
+                                          RowSpacing="6"
+                                          Margin="0,8,0,0">
+                                        <TextBlock Grid.Row="0"
+                                                   Grid.Column="0"
+                                                   Text="Unknown"
+                                                   Foreground="#AAB4C0" />
+
+                                        <NumericUpDown Grid.Row="0"
+                                                       Grid.Column="1"
+                                                       Minimum="0"
+                                                       Maximum="255"
+                                                       Value="{Binding SelectedAnimDataEntry.Unknown}" />
+
+                                        <TextBlock Grid.Row="1"
+                                                   Grid.Column="0"
+                                                   Text="Frame Count"
+                                                   Foreground="#AAB4C0" />
+
+                                        <NumericUpDown Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Minimum="0"
+                                                       Maximum="64"
+                                                       Value="{Binding SelectedAnimDataEntry.FrameCount}" />
+
+                                        <TextBlock Grid.Row="2"
+                                                   Grid.Column="0"
+                                                   Text="Frame Interval"
+                                                   Foreground="#AAB4C0" />
+
+                                        <NumericUpDown Grid.Row="2"
+                                                       Grid.Column="1"
+                                                       Minimum="0"
+                                                       Maximum="255"
+                                                       Value="{Binding SelectedAnimDataEntry.FrameInterval}" />
+
+                                        <TextBlock Grid.Row="3"
+                                                   Grid.Column="0"
+                                                   Text="Frame Start"
+                                                   Foreground="#AAB4C0" />
+
+                                        <NumericUpDown Grid.Row="3"
+                                                       Grid.Column="1"
+                                                       Minimum="0"
+                                                       Maximum="255"
+                                                       Value="{Binding SelectedAnimDataEntry.FrameStart}" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <Border Grid.Row="1"
+                                        Background="#151A20"
+                                        BorderBrush="#343B46"
+                                        BorderThickness="1"
+                                        CornerRadius="4">
+                                    <ListBox ItemsSource="{Binding SelectedAnimDataEntry.Frames}"
+                                             SelectedItem="{Binding SelectedAnimDataFrame}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="6,4">
+                                                    <TextBlock Text="{Binding DisplayText}"
+                                                               Foreground="#E4EAF2" />
+                                                    <TextBlock Text="{Binding StatusText}"
+                                                               FontSize="11"
+                                                               Foreground="#AAB4C0" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+
+                                <Grid Grid.Row="2"
+                                      RowDefinitions="Auto,Auto"
+                                      RowSpacing="5"
+                                      Margin="0,2,0,4">
+
+                                    <Grid Grid.Row="0"
+                                          ColumnDefinitions="90,Auto,58,78"
+                                          ColumnSpacing="6">
+                                        <TextBox Grid.Column="0"
+                                                 Watermark="0x091E"
+                                                 Text="{Binding AnimDataAddFrameGraphicText}" />
+
+                                        <CheckBox Grid.Column="1"
+                                                  Content="Rel"
+                                                  IsChecked="{Binding AnimDataAddFrameRelative}"
+                                                  VerticalAlignment="Center" />
+
+                                        <Button Grid.Column="2"
+                                                Content="Add"
+                                                Command="{Binding AddAnimDataFrameCommand}" />
+
+                                        <Button Grid.Column="3"
+                                                Content="Remove"
+                                                Command="{Binding RemoveAnimDataFrameCommand}" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1"
+                                          ColumnDefinitions="*,*,*"
+                                          ColumnSpacing="6">
+                                        <Button Grid.Column="0"
+                                                Content="Move Up"
+                                                Command="{Binding MoveAnimDataFrameUpCommand}" />
+
+                                        <Button Grid.Column="1"
+                                                Content="Move Down"
+                                                Command="{Binding MoveAnimDataFrameDownCommand}" />
+
+                                        <Button Grid.Column="2"
+                                                Content="Play"
+                                                Command="{Binding ToggleAnimDataAnimationCommand}" />
+                                    </Grid>
+                                </Grid>
+
+                                <Border Grid.Row="3"
+                                        Height="1"
+                                        Background="#343B46"
+                                        Margin="0,4" />
+
+                                <ScrollViewer Grid.Row="4"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Spacing="12">
+
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Base TileData"
+                                                       FontWeight="Bold"
+                                                       Foreground="#E4EAF2" />
+
+                                            <TextBlock Text="{Binding SelectedAnimDataTileDataEntry.DisplayText}"
+                                                       Foreground="#C7D1DB"
+                                                       TextWrapping="Wrap" />
+
+                                            <TextBlock Text="{Binding SelectedAnimDataTileDataEntry.Flags, StringFormat='Flags: 0x{0:X16}'}"
+                                                       Foreground="#AAB4C0"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Frame TileData"
+                                                       FontWeight="Bold"
+                                                       Foreground="#E4EAF2" />
+
+                                            <TextBlock Text="{Binding SelectedAnimDataFrameTileDataEntry.DisplayText}"
+                                                       Foreground="#C7D1DB"
+                                                       TextWrapping="Wrap" />
+
+                                            <TextBlock Text="{Binding SelectedAnimDataFrameTileDataEntry.Flags, StringFormat='Flags: 0x{0:X16}'}"
+                                                       Foreground="#AAB4C0"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Grid>
