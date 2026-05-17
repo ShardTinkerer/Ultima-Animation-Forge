@@ -12,7 +12,7 @@
         Background="#1B1F25"
         Foreground="White"
         RequestedThemeVariant="Dark"
-        Title="Ultima Animation Forge Alpha 17"
+        Title="Ultima Animation Forge Alpha 18"
         DragDrop.AllowDrop="True"
         mc:Ignorable="d">
 
@@ -1989,7 +1989,6 @@
                             <Button Content="Load Art"
                                     Command="{Binding LoadArtTabCommand}" />
 
-
                             <Button Content="Import Selected"
                                     Command="{Binding ImportSelectedArtCommand}" />
 
@@ -2002,6 +2001,12 @@
                             <Button Content="Mass Export"
                                     Command="{Binding MassExportArtCommand}" />
 
+                            <Button Content="Remove Checked"
+                                    Command="{Binding RemoveCheckedArtCommand}" />
+
+                            <Button Content="Undo Art Change"
+                                    Command="{Binding UndoArtChangeCommand}" />
+
                             <Button Content="Check All"
                                     Command="{Binding CheckAllArtCommand}" />
 
@@ -2011,9 +2016,11 @@
                             <Button Content="Save Art Changes"
                                     Command="{Binding SaveArtChangesCommand}" />
 
-                            <TextBlock Text="{Binding ArtStatusText}"
-                                       VerticalAlignment="Center"
-                                       Foreground="#C7D1DB" />
+                            <Button Content="Save TileData"
+                                    Command="{Binding SaveTileDataChangesCommand}" />
+
+                            <Button Content="Save AnimData"
+                                    Command="{Binding SaveAnimDataCommand}" />
                         </StackPanel>
                     </Border>
 
@@ -2037,6 +2044,15 @@
                                     <TextBox Watermark="Search ID / hex..."
                                              Text="{Binding ArtSearchText}" />
 
+                                    <ComboBox ItemsSource="{Binding ArtSlotFilterOptions}"
+                                              SelectedItem="{Binding SelectedArtSlotFilter}"
+                                              Width="180"/>
+
+                                    <ComboBox ItemsSource="{Binding ArtEraFilters}"
+                                              SelectedItem="{Binding SelectedArtEraFilter}"
+                                              PlaceholderText="UO Era Filter"
+                                              Width="220"/>
+
                                     <StackPanel Orientation="Horizontal"
                                                 Spacing="12">
                                         <CheckBox Content="Land"
@@ -2047,9 +2063,6 @@
 
                                         <CheckBox Content="ArtTiles"
                                                   IsChecked="{Binding ShowArtThumbnails}" />
-
-                                        <CheckBox Content="Free Slots"
-                                                  IsChecked="{Binding ShowFreeArtSlots}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -2215,29 +2228,157 @@
                                                    Foreground="#AAB4C0"
                                                    TextWrapping="Wrap" />
 
-                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.TextureId, StringFormat='Texture ID: {0}'}"
-                                                   Foreground="#AAB4C0" />
-
                                         <TextBlock Text="{Binding SelectedArtTileDataFlagNames, StringFormat='Flag Names: {0}'}"
                                                    Foreground="#AAB4C0"
                                                    TextWrapping="Wrap" />
 
-                                        <TextBlock Text="{Binding SelectedArtAnimationGumpText}"
-                                                   Foreground="#AAB4C0"
-                                                   TextWrapping="Wrap" />
+                                        <Button Content="Edit Flags..."
+                                                Command="{Binding OpenArtTileDataFlagsCommand}" />
 
-                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Weight, StringFormat='Weight: {0}'}"
-                                                   Foreground="#AAB4C0" />
+                                        <Button Content="{Binding ArtAnimDataEditButtonText}"
+                                                Command="{Binding OpenArtAnimDataEditorCommand}" />
 
-                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Height, StringFormat='Height: {0}'}"
-                                                   Foreground="#AAB4C0" />
+                                        <CheckBox Content="Show TileData Editor"
+                                                  IsChecked="{Binding ShowArtTileDataEditor}"
+                                                  Foreground="#C7D1DB"/>
 
-                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.Hue, StringFormat='Hue: {0}'}"
-                                                   Foreground="#AAB4C0" />
+                                        <StackPanel IsVisible="{Binding ShowArtTileDataEditor}"
+                                                    Spacing="4">
 
-                                        <TextBlock Text="{Binding SelectedArtTileDataEntry.StackingOffset, StringFormat='Stack Offset: {0}'}"
-                                                   Foreground="#AAB4C0" />
+                                            <TextBlock Text="Name" Foreground="#AAB4C0"/>
+                                            <TextBox Text="{Binding SelectedArtTileDataEntry.Name, Mode=TwoWay}"
+                                                     LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Animation/Gump" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Animation, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="640000"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Weight" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Weight, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Quality/Layer/Light" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Quality, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Quantity" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Quantity, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Hue" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Hue, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Stack Offset" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.StackingOffset, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Value" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Value, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+
+                                            <TextBlock Text="Height" Foreground="#AAB4C0"/>
+                                            <NumericUpDown Value="{Binding SelectedArtTileDataEntry.Height, Mode=TwoWay}"
+                                                           Minimum="0"
+                                                           Maximum="255"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           LostFocus="ArtTileDataEditField_LostFocus"/>
+                                        </StackPanel>
                                     </StackPanel>
+
+                                    <Expander Header="Image Tools"
+                                              IsExpanded="{Binding ShowArtImageTools}">
+                                        <StackPanel Spacing="8"
+                                                    Margin="0,8,0,0">
+
+                                            <TextBlock Text="Enhance"
+                                                       FontWeight="Bold"
+                                                       Foreground="#E4EAF2"/>
+
+                                            <TextBlock Text="{Binding ArtBrightness, StringFormat='Brightness: {0:0}'}"/>
+                                            <Slider Minimum="-80"
+                                                    Maximum="80"
+                                                    Value="{Binding ArtBrightness}"/>
+
+                                            <TextBlock Text="{Binding ArtContrast, StringFormat='Contrast: {0:0}'}"/>
+                                            <Slider Minimum="-80"
+                                                    Maximum="80"
+                                                    Value="{Binding ArtContrast}"/>
+
+                                            <TextBlock Text="{Binding ArtSharpness, StringFormat='Sharpness: {0:0}'}"/>
+                                            <Slider Minimum="0"
+                                                    Maximum="100"
+                                                    Value="{Binding ArtSharpness}"/>
+
+                                            <ComboBox Width="110"
+                                                      ItemsSource="{Binding ArtSharpenModes}"
+                                                      SelectedItem="{Binding SelectedArtSharpenMode}"/>
+
+                                            <Button Content="Apply Enhancement"
+                                                    Command="{Binding ApplyArtEnhancementCommand}"/>
+
+                                            <Border Height="1"
+                                                    Background="#343B46"
+                                                    Margin="0,4"/>
+
+                                            <TextBlock Text="Overlay"
+                                                       FontWeight="Bold"
+                                                       Foreground="#E4EAF2"/>
+
+                                            <Button Content="Load Overlay Image"
+                                                    Command="{Binding LoadArtOverlayImageCommand}"/>
+
+                                            <TextBlock Text="{Binding ArtOverlayOpacity, StringFormat='Opacity: {0:0}%'}"/>
+                                            <Slider Minimum="0"
+                                                    Maximum="100"
+                                                    Value="{Binding ArtOverlayOpacity}"/>
+
+                                            <ComboBox ItemsSource="{Binding ArtOverlayBlendModes}"
+                                                      SelectedItem="{Binding SelectedArtOverlayBlendMode}"/>
+
+                                            <Button Content="Apply Overlay To Art"
+                                                    Command="{Binding ApplyArtOverlayCommand}"/>
+
+                                            <Border Height="1"
+                                                    Background="#343B46"
+                                                    Margin="0,4"/>
+
+                                            <Button Content="Queue Art Edit"
+                                                    Command="{Binding QueueSelectedArtEditCommand}"/>
+
+                                            <Button Content="Reset Edit"
+                                                    Command="{Binding ResetArtEditCommand}"/>
+                                        </StackPanel>
+                                    </Expander>
 
                                     <Border Height="1"
                                             Background="#343B46"

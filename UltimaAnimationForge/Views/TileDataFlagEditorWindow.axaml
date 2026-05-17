@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UltimaAnimationForge.Views.TileDataFlagEditorWindow"
+        x:CompileBindings="False"
+        Width="760"
+        Height="520"
+        Title="Edit TileData Flags"
+        Background="#1B2027">
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Margin="12"
+          RowSpacing="10">
+
+        <StackPanel Grid.Row="0"
+                    Spacing="4">
+            <TextBlock Text="{Binding SelectedTileDataEntry.DisplayText}"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Foreground="#E4EAF2"/>
+
+            <TextBlock Text="{Binding SelectedTileDataEntry.Flags, StringFormat='Flags: 0x{0:X16}'}"
+                       Foreground="#AAB4C0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Background="#151A20"
+                BorderBrush="#343B46"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding SelectedTileDataFlagOptions}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Width="155"
+                                      Margin="4"
+                                      Content="{Binding Name}"
+                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      Command="{Binding $parent[ItemsControl].DataContext.ToggleSelectedTileDataFlagCommand}"
+                                      CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button Content="Close"
+                    Width="90"
+                    Click="Close_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

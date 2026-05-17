@@ -32,6 +32,8 @@ public partial class MainWindowViewModel
     "Unused32"
 };
 
+    private string loadedTileDataFolderPath = string.Empty;
+
     [ObservableProperty]
     private TileDataEntry? selectedTileDataEntry;
 
@@ -46,6 +48,15 @@ public partial class MainWindowViewModel
 
     public ICommand RefreshTileDataCommand { get; private set; } = null!;
 
+    private void ResetTileDataForProfileChange()
+    {
+        TileDataEntries.Clear();
+        FilteredTileDataEntries.Clear();
+        SelectedTileDataFlagOptions.Clear();
+        SelectedTileDataEntry = null;
+        loadedTileDataFolderPath = string.Empty;
+    }
+
     private void InitializeTileDataCommands()
     {
         RefreshTileDataCommand = new RelayCommand(LoadTileData);
@@ -55,8 +66,12 @@ public partial class MainWindowViewModel
     {
         TileDataEntries.Clear();
         FilteredTileDataEntries.Clear();
+        SelectedTileDataFlagOptions.Clear();
+        SelectedTileDataEntry = null;
 
         string folderPath = GetCurrentFolderPath();
+        loadedTileDataFolderPath = folderPath;
+
         string tileDataPath = Path.Combine(folderPath, "tiledata.mul");
 
         if (!File.Exists(tileDataPath))
@@ -106,6 +121,15 @@ public partial class MainWindowViewModel
         {
             FilteredTileDataEntries.Add(entry);
         }
+
+        if (FilteredTileDataEntries.Count > 0)
+        {
+            SelectedTileDataEntry ??= FilteredTileDataEntries[0];
+        }
+        else
+        {
+            SelectedTileDataEntry = null;
+        }
     }
 
     partial void OnTileDataSearchTextChanged(string value)
@@ -128,7 +152,7 @@ public partial class MainWindowViewModel
         RebuildSelectedTileDataFlags();
     }
 
-    private void RebuildSelectedTileDataFlags()
+    public void RebuildSelectedTileDataFlags()
     {
         SelectedTileDataFlagOptions.Clear();
 

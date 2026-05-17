@@ -62,9 +62,15 @@ public partial class MainWindowViewModel : ViewModelBase
             InitializeGumpsForCurrentFolder();
         }
 
-        if (value == MainToolTab.TileData && TileDataEntries.Count == 0)
+        if (value == MainToolTab.TileData)
         {
-            LoadTileData();
+            string currentFolder = GetCurrentFolderPath();
+
+            if (TileDataEntries.Count == 0 ||
+                !string.Equals(loadedTileDataFolderPath, currentFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                LoadTileData();
+            }
         }
 
         if (value == MainToolTab.Art && ArtEntries.Count == 0)

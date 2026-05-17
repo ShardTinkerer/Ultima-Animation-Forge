@@ -1,5 +1,7 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,17 +11,91 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using UltimaAnimationForge.Models;
 using UltimaAnimationForge.Services;
+using UltimaAnimationForge.Views;
 
 namespace UltimaAnimationForge.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    [ObservableProperty]
+    private string selectedArtSharpenMode = "Gaussian";
+
+    public ObservableCollection<string> ArtSharpenModes { get; } = new()
+{
+    "Gaussian",
+    "Pixel"
+};
+
+    [ObservableProperty]
+    private bool showArtTileDataEditor;
+
+    public ObservableCollection<string> ArtSlotFilterOptions { get; } = new()
+{
+    "All",
+    "Used Only",
+    "Free Slots"
+};
+
+    [ObservableProperty]
+    private string selectedArtSlotFilter = "Used Only";
+
+    public ObservableCollection<ArtEraFilter> ArtEraFilters { get; } = new();
+
+    [ObservableProperty]
+    private ArtEraFilter? selectedArtEraFilter;
+
+    public bool UseArtEraFilter => SelectedArtEraFilter != null;
+
     private readonly ArtDataService artDataService = new();
 
+    public string ArtAnimDataEditButtonText =>
+    SelectedArtAnimDataEntry == null ? "Create AnimData..." : "Edit AnimData...";
+
     public ObservableCollection<ArtEntry> ArtEntries { get; } = new();
+
+    [ObservableProperty]
+    private AnimDataFrameEntry? selectedEditAnimDataFrame;
+
+    [ObservableProperty]
+    private string editAnimDataAddFrameGraphicText = string.Empty;
+
+    [ObservableProperty]
+    private bool editAnimDataAddFrameRelative;
+
+    [ObservableProperty]
+    private bool showArtImageTools;
+
+    [ObservableProperty]
+    private double artBrightness = 0;
+
+    [ObservableProperty]
+    private double artContrast = 0;
+
+    [ObservableProperty]
+    private double artSharpness = 0;
+
+    [ObservableProperty]
+    private double artOverlayOpacity = 35;
+
+    [ObservableProperty]
+    private string selectedArtOverlayBlendMode = "Multiply";
+
+    public ObservableCollection<string> ArtOverlayBlendModes { get; } = new()
+{
+    "Normal",
+    "Multiply",
+    "Overlay",
+    "SoftLight",
+    "Screen"
+};
+
+    private WriteableBitmap? originalArtEditBitmap;
+    private WriteableBitmap? artOverlayBitmap;
 
     private DispatcherTimer? artAnimDataPlaybackTimer;
     private int artAnimDataPlaybackIndex;
@@ -169,6 +245,44 @@ public partial class MainWindowViewModel
         }
     }
 
+    public void RefreshSelectedArtEquipmentGump()
+    {
+        LoadSelectedArtEquipmentGump();
+
+        OnPropertyChanged(nameof(SelectedArtMaleEquipmentGumpId));
+        OnPropertyChanged(nameof(SelectedArtMaleEquipmentGumpText));
+        OnPropertyChanged(nameof(ShowSelectedArtEquipmentGump));
+        OnPropertyChanged(nameof(SelectedArtAnimationGumpText));
+    }
+
+    [RelayCommand]
+    private void OpenArtTileDataFlags()
+    {
+        if (SelectedArtTileDataEntry == null)
+        {
+            return;
+        }
+
+        SelectedTileDataEntry = SelectedArtTileDataEntry;
+        RebuildSelectedTileDataFlags();
+
+        Window? mainWindow = GetMainWindow();
+
+        TileDataFlagEditorWindow window = new()
+        {
+            DataContext = this
+        };
+
+        if (mainWindow != null)
+        {
+            window.ShowDialog(mainWindow);
+        }
+        else
+        {
+            window.Show();
+        }
+    }
+
     [RelayCommand]
     private void LoadArtTab()
     {
@@ -197,7 +311,7 @@ public partial class MainWindowViewModel
             ArtStatusText = "Could not find artLegacyMUL.uop or art.mul/artidx.mul.";
             return;
         }
-
+        LoadArtEraFilters();
         RebuildArtEntries();
     }
 
@@ -206,13 +320,28 @@ public partial class MainWindowViewModel
     {
         ArtEntries.Clear();
 
+        bool includeFreeSlots = string.Equals(SelectedArtSlotFilter, "All", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(SelectedArtSlotFilter, "Free Slots", StringComparison.OrdinalIgnoreCase);
+
+        bool freeOnly = string.Equals(SelectedArtSlotFilter, "Free Slots", StringComparison.OrdinalIgnoreCase);
+
         foreach (ArtEntry entry in artDataService.BuildEntries(
-             ShowLandArt,
-             ShowStaticArt,
-             ShowFreeArtSlots,
-             ArtSearchText))
+                     ShowLandArt,
+                     ShowStaticArt,
+                     includeFreeSlots,
+                     ArtSearchText))
         {
-            if (showArtThumbnails)
+            if (freeOnly && !entry.IsFreeSlot)
+            {
+                continue;
+            }
+
+            if (!IsArtInEraFilter(entry, SelectedArtEraFilter))
+            {
+                continue;
+            }
+
+            if (ShowArtThumbnails)
             {
                 entry.Thumbnail = artDataService.LoadThumbnail(entry);
             }
@@ -233,9 +362,21 @@ public partial class MainWindowViewModel
         ArtStatusText = "Loaded " + ArtEntries.Count + " art entries.";
     }
 
+    partial void OnSelectedArtSlotFilterChanged(string value)
+    {
+        RebuildArtEntries();
+    }
+
+    partial void OnSelectedArtEraFilterChanged(ArtEraFilter? value)
+    {
+        RebuildArtEntries();
+    }
+
     partial void OnSelectedArtEntryChanged(ArtEntry? value)
     {
         SelectedArtBitmap = artDataService.LoadBitmap(value);
+        originalArtEditBitmap = SelectedArtBitmap != null ? CloneBitmap(SelectedArtBitmap) : null;
+        artOverlayBitmap = null;
 
         if (value != null)
         {
@@ -253,6 +394,7 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(ShowSelectedArtEquipmentGump));
         OnPropertyChanged(nameof(SelectedArtTileDataFlagNames));
         OnPropertyChanged(nameof(SelectedArtAnimationGumpText));
+        OnPropertyChanged(nameof(ArtAnimDataEditButtonText));
     }
 
     partial void OnArtSearchTextChanged(string value)
@@ -761,5 +903,702 @@ public partial class MainWindowViewModel
         {
             RebuildArtEntries();
         }
+    }
+
+    private void LoadArtEraFilters()
+    {
+        ArtEraFilters.Clear();
+
+        string path = Path.Combine(AppContext.BaseDirectory, "art_era_filters.json");
+
+        if (!File.Exists(path))
+        {
+            SelectedArtEraFilter = null;
+            return;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(path);
+
+            ArtEraFilterConfig? config = JsonSerializer.Deserialize<ArtEraFilterConfig>(
+                json,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            if (config?.Eras == null)
+            {
+                SelectedArtEraFilter = null;
+                return;
+            }
+
+            foreach (ArtEraFilter era in config.Eras.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
+            {
+                ArtEraFilters.Add(era);
+            }
+
+            SelectedArtEraFilter = null;
+        }
+        catch
+        {
+            SelectedArtEraFilter = null;
+        }
+    }
+
+    private static bool IsArtInEraFilter(ArtEntry entry, ArtEraFilter? era)
+    {
+        if (era == null)
+        {
+            return true;
+        }
+
+        List<ArtEraRange> ranges = string.Equals(entry.Type, "Land", StringComparison.OrdinalIgnoreCase)
+            ? era.LandRanges
+            : era.StaticRanges;
+
+        foreach (ArtEraRange range in ranges)
+        {
+            if (!TryParseArtNumber(range.From, out int from))
+            {
+                continue;
+            }
+
+            if (!TryParseArtNumber(range.To, out int to))
+            {
+                continue;
+            }
+
+            if (entry.ArtId >= from && entry.ArtId <= to)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryParseArtNumber(string text, out int value)
+    {
+        value = 0;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        text = text.Trim();
+
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            return int.TryParse(
+                text[2..],
+                System.Globalization.NumberStyles.HexNumber,
+                null,
+                out value);
+        }
+
+        return int.TryParse(text, out value);
+    }
+
+    [RelayCommand]
+    private void OpenArtAnimDataEditor()
+    {
+        if (SelectedArtEntry == null || !string.Equals(SelectedArtEntry.Type, "Static", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (SelectedArtAnimDataEntry == null)
+        {
+            AnimDataEntry newEntry = new()
+            {
+                Id = SelectedArtEntry.ArtId,
+                FrameCount = 0,
+                FrameInterval = 1,
+                FrameStart = 0,
+                ArtExists = true,
+                HasAnimationTileFlag = true,
+                IsChecked = true
+            };
+
+            AnimDataEntries.Add(newEntry);
+            animDataMulService.AddOrReplaceEntry(newEntry);
+            SelectedAnimDataEntry = newEntry;
+        }
+
+        RebuildSelectedArtAnimDataFrames();
+
+        Window? mainWindow = GetMainWindow();
+
+        AnimDataEditorWindow window = new()
+        {
+            DataContext = this
+        };
+
+        if (mainWindow != null)
+        {
+            window.ShowDialog(mainWindow);
+        }
+        else
+        {
+            window.Show();
+        }
+    }
+
+    public void RefreshArtAnimDataFromEditor()
+    {
+        AnimDataEntry? entry = SelectedArtAnimDataEntry;
+        if (entry == null)
+        {
+            return;
+        }
+
+        entry.IsChecked = true;
+        animDataMulService.AddOrReplaceEntry(entry);
+
+        RebuildSelectedArtAnimDataFrames();
+
+        OnPropertyChanged(nameof(SelectedArtAnimDataEntry));
+        OnPropertyChanged(nameof(SelectedArtAnimDataStatusText));
+        OnPropertyChanged(nameof(ArtAnimDataEditButtonText));
+        OnPropertyChanged(nameof(SelectedArtAnimDataFrames));
+    }
+
+    [RelayCommand]
+    private void AddEditAnimDataFrame()
+    {
+        AnimDataEntry? entry = SelectedArtAnimDataEntry;
+        if (entry == null)
+        {
+            return;
+        }
+
+        if (entry.FrameCount >= 64)
+        {
+            ArtStatusText = "AnimData already has 64 frames.";
+            return;
+        }
+
+        if (!TryParseAnimDataNumber(EditAnimDataAddFrameGraphicText, out int value))
+        {
+            ArtStatusText = "Enter a valid graphic ID or offset.";
+            return;
+        }
+
+        int offset = EditAnimDataAddFrameRelative
+            ? value
+            : value - entry.Id;
+
+        if (offset < sbyte.MinValue || offset > sbyte.MaxValue)
+        {
+            ArtStatusText = "Frame offset must be between -128 and 127.";
+            return;
+        }
+
+        int newIndex = entry.FrameCount;
+        entry.FrameOffsets[newIndex] = (sbyte)offset;
+        entry.FrameCount++;
+        entry.IsChecked = true;
+
+        RebuildSelectedArtAnimDataFrames();
+        SelectedEditAnimDataFrame = entry.Frames.Count > newIndex ? entry.Frames[newIndex] : entry.Frames.LastOrDefault();
+
+        ArtStatusText = "Added AnimData frame.";
+    }
+
+    [RelayCommand]
+    private void RemoveEditAnimDataFrame()
+    {
+        AnimDataEntry? entry = SelectedArtAnimDataEntry;
+        if (entry == null || SelectedEditAnimDataFrame == null)
+        {
+            return;
+        }
+
+        int removeIndex = SelectedEditAnimDataFrame.FrameIndex;
+        if (removeIndex < 0 || removeIndex >= entry.FrameCount)
+        {
+            return;
+        }
+
+        for (int i = removeIndex; i < entry.FrameCount - 1; i++)
+        {
+            entry.FrameOffsets[i] = entry.FrameOffsets[i + 1];
+        }
+
+        entry.FrameOffsets[entry.FrameCount - 1] = 0;
+        entry.FrameCount--;
+        entry.IsChecked = true;
+
+        RebuildSelectedArtAnimDataFrames();
+
+        if (entry.Frames.Count > 0)
+        {
+            SelectedEditAnimDataFrame = entry.Frames[Math.Min(removeIndex, entry.Frames.Count - 1)];
+        }
+        else
+        {
+            SelectedEditAnimDataFrame = null;
+        }
+
+        ArtStatusText = "Removed AnimData frame.";
+    }
+
+    [RelayCommand]
+    private void MoveEditAnimDataFrameUp()
+    {
+        MoveEditAnimDataFrame(-1);
+    }
+
+    [RelayCommand]
+    private void MoveEditAnimDataFrameDown()
+    {
+        MoveEditAnimDataFrame(1);
+    }
+
+    private void MoveEditAnimDataFrame(int direction)
+    {
+        AnimDataEntry? entry = SelectedArtAnimDataEntry;
+        if (entry == null || SelectedEditAnimDataFrame == null)
+        {
+            return;
+        }
+
+        int index = SelectedEditAnimDataFrame.FrameIndex;
+        int targetIndex = index + direction;
+
+        if (index < 0 || targetIndex < 0 || targetIndex >= entry.FrameCount)
+        {
+            return;
+        }
+
+        (entry.FrameOffsets[index], entry.FrameOffsets[targetIndex]) =
+            (entry.FrameOffsets[targetIndex], entry.FrameOffsets[index]);
+
+        entry.IsChecked = true;
+
+        RebuildSelectedArtAnimDataFrames();
+        SelectedEditAnimDataFrame = entry.Frames[targetIndex];
+
+        ArtStatusText = "Moved AnimData frame.";
+    }
+
+    [RelayCommand]
+    private void RemoveCheckedArt()
+    {
+        List<ArtEntry> checkedEntries = ArtEntries
+            .Where(entry => entry.IsChecked)
+            .ToList();
+
+        if (checkedEntries.Count == 0)
+        {
+            ArtStatusText = "Check one or more art entries to remove.";
+            return;
+        }
+
+        bool success = artDataService.QueueRemoveArtEntries(checkedEntries, out string message);
+        ArtStatusText = message;
+
+        if (success)
+        {
+            RebuildArtEntries();
+        }
+    }
+
+    [RelayCommand]
+    private void UndoArtChange()
+    {
+        bool success = artDataService.UndoPendingArtChange(out string message);
+        ArtStatusText = message;
+
+        if (success)
+        {
+            RebuildArtEntries();
+        }
+    }
+
+    [RelayCommand]
+    private void ResetArtEdit()
+    {
+        if (originalArtEditBitmap == null)
+        {
+            return;
+        }
+
+        SelectedArtBitmap = CloneBitmap(originalArtEditBitmap);
+        ArtStatusText = "Reset art edit preview.";
+    }
+
+    [RelayCommand]
+    private void ApplyArtEnhancement()
+    {
+        if (SelectedArtBitmap == null)
+        {
+            ArtStatusText = "No art selected.";
+            return;
+        }
+
+        SelectedArtBitmap = EnhanceBitmap(
+            SelectedArtBitmap,
+            ArtBrightness,
+            ArtContrast,
+            ArtSharpness,
+            SelectedArtSharpenMode);
+
+        ArtStatusText = "Applied art enhancement preview.";
+    }
+
+    [RelayCommand]
+    private async Task LoadArtOverlayImageAsync()
+    {
+        Window? mainWindow = GetMainWindow();
+        if (mainWindow == null)
+        {
+            ArtStatusText = "Could not locate main window.";
+            return;
+        }
+
+        IReadOnlyList<IStorageFile> files = await mainWindow.StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions
+            {
+                Title = "Choose Art Overlay Image",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                new FilePickerFileType("Image files")
+                {
+                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp" }
+                }
+                }
+            });
+
+        if (files.Count == 0)
+        {
+            ArtStatusText = "Load overlay cancelled.";
+            return;
+        }
+
+        string? path = files[0].TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            ArtStatusText = "Selected overlay image is invalid.";
+            return;
+        }
+
+        artOverlayBitmap = LoadBitmapFromImageFile(path);
+        ArtStatusText = "Loaded art overlay image.";
+    }
+
+    [RelayCommand]
+    private void ApplyArtOverlay()
+    {
+        if (SelectedArtBitmap == null)
+        {
+            ArtStatusText = "No art selected.";
+            return;
+        }
+
+        if (artOverlayBitmap == null)
+        {
+            ArtStatusText = "Load an overlay image first.";
+            return;
+        }
+
+        SelectedArtBitmap = BlendOverlayIntoBitmap(
+            SelectedArtBitmap,
+            artOverlayBitmap,
+            ArtOverlayOpacity / 100.0,
+            SelectedArtOverlayBlendMode);
+
+        ArtStatusText = "Applied overlay to art preview.";
+    }
+
+    [RelayCommand]
+    private void QueueSelectedArtEdit()
+    {
+        if (SelectedArtEntry == null || SelectedArtBitmap == null)
+        {
+            ArtStatusText = "No art selected.";
+            return;
+        }
+
+        bool success = artDataService.QueueBitmapToArt(SelectedArtEntry, SelectedArtBitmap, out string message);
+        ArtStatusText = message;
+
+        if (success)
+        {
+            originalArtEditBitmap = CloneBitmap(SelectedArtBitmap);
+        }
+    }
+
+    private static WriteableBitmap LoadBitmapFromImageFile(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        Bitmap bitmap = new Bitmap(stream);
+
+        WriteableBitmap output = new WriteableBitmap(
+            bitmap.PixelSize,
+            new Avalonia.Vector(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
+
+        using ILockedFramebuffer framebuffer = output.Lock();
+        bitmap.CopyPixels(framebuffer, AlphaFormat.Premul);
+
+        return output;
+    }
+
+    private static WriteableBitmap BlendOverlayIntoBitmap(
+    WriteableBitmap baseBitmap,
+    WriteableBitmap overlayBitmap,
+    double opacity,
+    string blendMode)
+    {
+        FramePixels basePixels = ReadBitmapPixels(baseBitmap);
+        FramePixels overlayPixels = ReadBitmapPixels(overlayBitmap);
+
+        byte[] output = (byte[])basePixels.Pixels.Clone();
+
+        opacity = Math.Clamp(opacity, 0.0, 1.0);
+
+        for (int y = 0; y < basePixels.Height; y++)
+        {
+            for (int x = 0; x < basePixels.Width; x++)
+            {
+                int dst = ((y * basePixels.Width) + x) * 4;
+
+                byte baseA = output[dst + 3];
+                if (baseA == 0)
+                {
+                    continue;
+                }
+
+                int ox = x * overlayPixels.Width / basePixels.Width;
+                int oy = y * overlayPixels.Height / basePixels.Height;
+                int src = ((oy * overlayPixels.Width) + ox) * 4;
+
+                double overlayAlpha = (overlayPixels.Pixels[src + 3] / 255.0) * opacity;
+                if (overlayAlpha <= 0)
+                {
+                    continue;
+                }
+
+                byte b = BlendChannel(output[dst + 0], overlayPixels.Pixels[src + 0], overlayAlpha, blendMode);
+                byte g = BlendChannel(output[dst + 1], overlayPixels.Pixels[src + 1], overlayAlpha, blendMode);
+                byte r = BlendChannel(output[dst + 2], overlayPixels.Pixels[src + 2], overlayAlpha, blendMode);
+
+                output[dst + 0] = b;
+                output[dst + 1] = g;
+                output[dst + 2] = r;
+            }
+        }
+
+        return CreateBitmapFromPixels(basePixels.Width, basePixels.Height, output);
+    }
+
+    private static byte BlendChannel(byte baseValue, byte overlayValue, double alpha, string blendMode)
+    {
+        double b = baseValue / 255.0;
+        double o = overlayValue / 255.0;
+        double mixed;
+
+        switch (blendMode)
+        {
+            case "Multiply":
+                mixed = b * o;
+                break;
+
+            case "Screen":
+                mixed = 1.0 - ((1.0 - b) * (1.0 - o));
+                break;
+
+            case "Overlay":
+                mixed = b < 0.5
+                    ? 2.0 * b * o
+                    : 1.0 - (2.0 * (1.0 - b) * (1.0 - o));
+                break;
+
+            case "SoftLight":
+                mixed = (1.0 - 2.0 * o) * b * b + (2.0 * o * b);
+                break;
+
+            default:
+                mixed = o;
+                break;
+        }
+
+        double final = b + ((mixed - b) * alpha);
+        return (byte)Math.Clamp(final * 255.0, 0.0, 255.0);
+    }
+
+    private static FramePixels ReadBitmapPixels(WriteableBitmap bitmap)
+    {
+        using ILockedFramebuffer framebuffer = bitmap.Lock();
+
+        int width = framebuffer.Size.Width;
+        int height = framebuffer.Size.Height;
+        int srcRowBytes = framebuffer.RowBytes;
+        int dstRowBytes = width * 4;
+
+        byte[] src = new byte[srcRowBytes * height];
+        Marshal.Copy(framebuffer.Address, src, 0, src.Length);
+
+        byte[] pixels = new byte[dstRowBytes * height];
+
+        for (int y = 0; y < height; y++)
+        {
+            Buffer.BlockCopy(src, y * srcRowBytes, pixels, y * dstRowBytes, dstRowBytes);
+        }
+
+        return new FramePixels(width, height, pixels);
+    }
+
+    private static WriteableBitmap CreateBitmapFromPixels(int width, int height, byte[] pixels)
+    {
+        WriteableBitmap bitmap = new WriteableBitmap(
+            new PixelSize(width, height),
+            new Vector(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
+
+        using ILockedFramebuffer framebuffer = bitmap.Lock();
+        Marshal.Copy(pixels, 0, framebuffer.Address, pixels.Length);
+
+        return bitmap;
+    }
+
+    private static WriteableBitmap EnhanceBitmap(
+        WriteableBitmap source,
+        double brightness,
+        double contrast,
+        double sharpness,
+        string sharpenMode)
+    {
+        FramePixels frame = ReadBitmapPixels(source);
+        byte[] output = (byte[])frame.Pixels.Clone();
+
+        double brightnessOffset = brightness * 2.55;
+        double contrastFactor = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast));
+
+        for (int i = 0; i < output.Length; i += 4)
+        {
+            if (output[i + 3] == 0)
+            {
+                continue;
+            }
+
+            output[i + 0] = AdjustColor(output[i + 0], brightnessOffset, contrastFactor);
+            output[i + 1] = AdjustColor(output[i + 1], brightnessOffset, contrastFactor);
+            output[i + 2] = AdjustColor(output[i + 2], brightnessOffset, contrastFactor);
+        }
+
+        if (sharpness > 0)
+        {
+            output = sharpenMode == "Pixel"
+    ? PixelSharpenPixels(frame.Width, frame.Height, output, sharpness / 100.0)
+    : GaussianSharpenPixels(frame.Width, frame.Height, output, sharpness / 100.0);
+        }
+
+        return CreateBitmapFromPixels(frame.Width, frame.Height, output);
+    }
+
+    private static byte AdjustColor(byte value, double brightnessOffset, double contrastFactor)
+    {
+        double adjusted = contrastFactor * (value - 128.0) + 128.0 + brightnessOffset;
+        return (byte)Math.Clamp(adjusted, 0.0, 255.0);
+    }
+
+    private static byte[] GaussianSharpenPixels(int width, int height, byte[] source, double amount)
+    {
+        byte[] output = (byte[])source.Clone();
+
+        for (int y = 1; y < height - 1; y++)
+        {
+            for (int x = 1; x < width - 1; x++)
+            {
+                int index = ((y * width) + x) * 4;
+
+                if (source[index + 3] == 0)
+                {
+                    continue;
+                }
+
+                for (int c = 0; c < 3; c++)
+                {
+                    int center = source[index + c] * 5;
+                    int left = source[(((y * width) + (x - 1)) * 4) + c];
+                    int right = source[(((y * width) + (x + 1)) * 4) + c];
+                    int up = source[((((y - 1) * width) + x) * 4) + c];
+                    int down = source[((((y + 1) * width) + x) * 4) + c];
+
+                    double sharpened = center - left - right - up - down;
+                    double blended = source[index + c] + ((sharpened - source[index + c]) * amount);
+
+                    output[index + c] = (byte)Math.Clamp(blended, 0.0, 255.0);
+                }
+            }
+        }
+
+        return output;
+    }
+
+    private static byte[] PixelSharpenPixels(
+    int width,
+    int height,
+    byte[] source,
+    double amount)
+    {
+        byte[] output = (byte[])source.Clone();
+
+        for (int y = 1; y < height - 1; y++)
+        {
+            for (int x = 1; x < width - 1; x++)
+            {
+                int index = ((y * width) + x) * 4;
+
+                if (source[index + 3] == 0)
+                {
+                    continue;
+                }
+
+                for (int c = 0; c < 3; c++)
+                {
+                    int current = source[index + c];
+
+                    int maxNeighbor = current;
+
+                    for (int oy = -1; oy <= 1; oy++)
+                    {
+                        for (int ox = -1; ox <= 1; ox++)
+                        {
+                            if (ox == 0 && oy == 0)
+                            {
+                                continue;
+                            }
+
+                            int neighborIndex =
+                                ((((y + oy) * width) + (x + ox)) * 4) + c;
+
+                            int value = source[neighborIndex];
+
+                            if (value > maxNeighbor)
+                            {
+                                maxNeighbor = value;
+                            }
+                        }
+                    }
+
+                    double boosted =
+                        current + ((maxNeighbor - current) * amount);
+
+                    output[index + c] =
+                        (byte)Math.Clamp(boosted, 0, 255);
+                }
+            }
+        }
+
+        return output;
     }
 }

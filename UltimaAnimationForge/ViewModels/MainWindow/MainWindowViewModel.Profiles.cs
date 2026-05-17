@@ -94,12 +94,18 @@ public partial class MainWindowViewModel
         LoadActiveProfileIntoUi();
 
         ResetGumpsForProfileChange();
+        ResetTileDataForProfileChange();
 
         _ = LoadCurrentProfileFolderAsync();
 
         if (ActiveToolTab == MainToolTab.Gumps)
         {
             InitializeGumpsForCurrentFolder();
+        }
+
+        if (ActiveToolTab == MainToolTab.TileData)
+        {
+            LoadTileData();
         }
     }
 

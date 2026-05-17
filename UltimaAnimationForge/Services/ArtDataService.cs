@@ -5,6 +5,7 @@ using Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using UltimaAnimationForge.Models;
 
@@ -13,6 +14,7 @@ namespace UltimaAnimationForge.Services;
 public sealed class ArtDataService
 {
     private readonly Dictionary<ulong, UopFileData> pendingUopArtEdits = new();
+    private readonly Stack<Dictionary<ulong, UopFileData>> pendingArtUndoStack = new();
 
     public bool HasPendingArtChanges => pendingUopArtEdits.Count > 0;
     public int PendingArtChangeCount => pendingUopArtEdits.Count;
@@ -36,6 +38,7 @@ public sealed class ArtDataService
         if (!string.Equals(folderPath, newFolderPath, StringComparison.OrdinalIgnoreCase))
         {
             pendingUopArtEdits.Clear();
+            pendingArtUndoStack.Clear();
         }
 
         folderPath = newFolderPath;
@@ -662,6 +665,8 @@ public sealed class ArtDataService
             string virtualPath = GetArtUopVirtualPath(entry.FileIndex);
             ulong targetHash = UopFileReader.CreateHash(virtualPath);
 
+            PushPendingArtUndoSnapshot();
+
             pendingUopArtEdits[targetHash] = new UopFileData
             {
                 Hash = targetHash,
@@ -942,7 +947,7 @@ public sealed class ArtDataService
                 });
             }
 
-            outputEntries.AddRange(pendingUopArtEdits.Values);
+            outputEntries.AddRange(pendingUopArtEdits.Values.Where(entry => !entry.IsEmpty));
 
             string backupPath = artLegacyUopPath + ".bak";
             if (!File.Exists(backupPath))
@@ -955,6 +960,7 @@ public sealed class ArtDataService
             UopFileWriter.WriteUopFile(artLegacyUopPath, outputEntries, 1000);
 
             pendingUopArtEdits.Clear();
+            pendingArtUndoStack.Clear();
             Initialize(folderPath);
 
             message = "Saved " + savedCount + " art changes to artLegacyMUL.uop.";
@@ -963,6 +969,137 @@ public sealed class ArtDataService
         catch (Exception exception)
         {
             message = "Save art changes failed: " + exception.Message;
+            return false;
+        }
+    }
+
+    public bool QueueRemoveArtEntries(IEnumerable<ArtEntry> entries, out string message)
+    {
+        message = string.Empty;
+
+        if (!useUop)
+        {
+            message = "Remove checked currently supports artLegacyMUL.uop only.";
+            return false;
+        }
+
+        List<ArtEntry> selectedEntries = entries
+            .Where(entry => entry != null && !entry.IsFreeSlot)
+            .GroupBy(entry => entry.FileIndex)
+            .Select(group => group.First())
+            .ToList();
+
+        if (selectedEntries.Count == 0)
+        {
+            message = "No used art entries were checked for removal.";
+            return false;
+        }
+
+        PushPendingArtUndoSnapshot();
+
+        foreach (ArtEntry entry in selectedEntries)
+        {
+            string virtualPath = GetArtUopVirtualPath(entry.FileIndex);
+            ulong hash = UopFileReader.CreateHash(virtualPath);
+
+            pendingUopArtEdits[hash] = new UopFileData
+            {
+                Hash = hash,
+                Data = Array.Empty<byte>(),
+                DecompressedSize = 0,
+                IsCompressed = false,
+                IsEmpty = true
+            };
+
+            entry.IsFreeSlot = true;
+            entry.SecondaryText = "Queued remove";
+        }
+
+        message = "Queued " + selectedEntries.Count + " art removals. Click Save Art Changes to write artLegacyMUL.uop.";
+        return true;
+    }
+
+    private void PushPendingArtUndoSnapshot()
+    {
+        pendingArtUndoStack.Push(
+            pendingUopArtEdits.ToDictionary(
+                pair => pair.Key,
+                pair => new UopFileData
+                {
+                    Hash = pair.Value.Hash,
+                    Data = pair.Value.Data,
+                    PrecompressedData = pair.Value.PrecompressedData,
+                    HeaderBytes = pair.Value.HeaderBytes,
+                    HeaderSize = pair.Value.HeaderSize,
+                    DecompressedSize = pair.Value.DecompressedSize,
+                    IsCompressed = pair.Value.IsCompressed,
+                    IsEmpty = pair.Value.IsEmpty
+                }));
+    }
+
+    public bool UndoPendingArtChange(out string message)
+    {
+        message = string.Empty;
+
+        if (pendingArtUndoStack.Count == 0)
+        {
+            message = "No pending art change to undo.";
+            return false;
+        }
+
+        pendingUopArtEdits.Clear();
+
+        foreach (KeyValuePair<ulong, UopFileData> pair in pendingArtUndoStack.Pop())
+        {
+            pendingUopArtEdits[pair.Key] = pair.Value;
+        }
+
+        message = "Undid last pending art change. Pending changes: " + pendingUopArtEdits.Count + ".";
+        return true;
+    }
+
+    public bool QueueBitmapToArt(ArtEntry entry, WriteableBitmap bitmap, out string message)
+    {
+        message = string.Empty;
+
+        if (entry == null || bitmap == null)
+        {
+            message = "No art entry selected.";
+            return false;
+        }
+
+        if (!useUop)
+        {
+            message = "Art editing currently supports artLegacyMUL.uop only.";
+            return false;
+        }
+
+        try
+        {
+            byte[] encodedData = entry.FileIndex < StaticOffset
+                ? EncodeLand(bitmap)
+                : EncodeStatic(bitmap);
+
+            string virtualPath = GetArtUopVirtualPath(entry.FileIndex);
+            ulong targetHash = UopFileReader.CreateHash(virtualPath);
+
+            PushPendingArtUndoSnapshot();
+
+            pendingUopArtEdits[targetHash] = new UopFileData
+            {
+                Hash = targetHash,
+                Data = encodedData,
+                DecompressedSize = (uint)encodedData.Length,
+                IsCompressed = true,
+                IsEmpty = false
+            };
+
+            message = "Queued edited art " + entry.DisplayText + ". Pending changes: " + pendingUopArtEdits.Count + ".";
+            return true;
+        }
+        catch (Exception exception)
+        {
+            message = "Art edit failed: " + exception.Message;
             return false;
         }
     }

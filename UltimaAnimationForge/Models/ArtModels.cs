@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 
 namespace UltimaAnimationForge.Models;
 
@@ -16,4 +17,27 @@ public partial class ArtEntry : ObservableObject
 
     public string DisplayText => Type + " 0x" + ArtId.ToString("X4") + " (" + ArtId + ")";
     public string ExportFileName => Type.ToLowerInvariant() + "_0x" + ArtId.ToString("X4") + ".png";
+}
+
+public sealed class ArtEraFilterConfig
+{
+    public List<ArtEraFilter> Eras { get; set; } = new();
+}
+
+public sealed class ArtEraFilter
+{
+    public string Name { get; set; } = string.Empty;
+    public List<ArtEraRange> LandRanges { get; set; } = new();
+    public List<ArtEraRange> StaticRanges { get; set; } = new();
+
+    public override string ToString()
+    {
+        return Name;
+    }
+}
+
+public sealed class ArtEraRange
+{
+    public string From { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
 }

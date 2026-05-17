@@ -559,4 +559,14 @@ public partial class MainWindow : Window
             vm.SelectedTileDataEntry.IsEdited = true;
         }
     }
+
+    private void ArtTileDataEditField_LostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is UltimaAnimationForge.ViewModels.MainWindowViewModel vm &&
+            vm.SelectedArtTileDataEntry != null)
+        {
+            vm.SelectedArtTileDataEntry.IsEdited = true;
+            vm.RefreshSelectedArtEquipmentGump();
+        }
+    }
 }

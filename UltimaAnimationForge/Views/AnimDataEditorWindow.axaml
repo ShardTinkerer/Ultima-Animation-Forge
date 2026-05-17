@@ -1,0 +1,134 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UltimaAnimationForge.Views.AnimDataEditorWindow"
+        x:CompileBindings="False"
+        Width="460"
+        Height="560"
+        MinWidth="440"
+        MinHeight="520"
+        Title="Edit AnimData"
+        Background="#1B2027">
+
+    <Grid RowDefinitions="*,Auto"
+          Margin="12"
+          RowSpacing="10">
+
+        <ScrollViewer Grid.Row="0"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="8">
+
+                <TextBlock Text="{Binding SelectedArtEntry.DisplayText}"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#E4EAF2" />
+
+                <TextBlock Text="{Binding SelectedArtAnimDataStatusText}"
+                           Foreground="#AAB4C0"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Text="Frame Count"
+                           Foreground="#AAB4C0" />
+                <NumericUpDown Value="{Binding SelectedArtAnimDataEntry.FrameCount, Mode=TwoWay}"
+                               Minimum="0"
+                               Maximum="64"
+                               Increment="1"
+                               FormatString="0"
+                               LostFocus="AnimDataEditField_LostFocus" />
+
+                <TextBlock Text="Frame Interval"
+                           Foreground="#AAB4C0" />
+                <NumericUpDown Value="{Binding SelectedArtAnimDataEntry.FrameInterval, Mode=TwoWay}"
+                               Minimum="0"
+                               Maximum="255"
+                               Increment="1"
+                               FormatString="0"
+                               LostFocus="AnimDataEditField_LostFocus" />
+
+                <TextBlock Text="Frame Start"
+                           Foreground="#AAB4C0" />
+                <NumericUpDown Value="{Binding SelectedArtAnimDataEntry.FrameStart, Mode=TwoWay}"
+                               Minimum="0"
+                               Maximum="255"
+                               Increment="1"
+                               FormatString="0"
+                               LostFocus="AnimDataEditField_LostFocus" />
+
+                <TextBlock Text="Frames"
+                           Foreground="#C7D1DB"
+                           FontWeight="Bold"
+                           Margin="0,10,0,0" />
+
+                <Border Background="#151A20"
+                        BorderBrush="#343B46"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                    <ListBox Height="150"
+                             ItemsSource="{Binding SelectedArtAnimDataFrames}"
+                             SelectedItem="{Binding SelectedEditAnimDataFrame}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="6,4">
+                                    <TextBlock Text="{Binding DisplayText}"
+                                               Foreground="#E4EAF2" />
+                                    <TextBlock Text="{Binding StatusText}"
+                                               FontSize="11"
+                                               Foreground="#AAB4C0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <Grid RowDefinitions="Auto,Auto"
+                      RowSpacing="6"
+                      Margin="0,4,0,0">
+
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="100,Auto,64,84"
+                          ColumnSpacing="6">
+                        <TextBox Grid.Column="0"
+                                 Watermark="0xA50A"
+                                 Text="{Binding EditAnimDataAddFrameGraphicText}" />
+
+                        <CheckBox Grid.Column="1"
+                                  Content="Rel"
+                                  IsChecked="{Binding EditAnimDataAddFrameRelative}"
+                                  VerticalAlignment="Center" />
+
+                        <Button Grid.Column="2"
+                                Content="Add"
+                                Command="{Binding AddEditAnimDataFrameCommand}" />
+
+                        <Button Grid.Column="3"
+                                Content="Remove"
+                                Command="{Binding RemoveEditAnimDataFrameCommand}" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,*"
+                          ColumnSpacing="6">
+                        <Button Grid.Column="0"
+                                Content="Move Up"
+                                Command="{Binding MoveEditAnimDataFrameUpCommand}" />
+
+                        <Button Grid.Column="1"
+                                Content="Move Down"
+                                Command="{Binding MoveEditAnimDataFrameDownCommand}" />
+                    </Grid>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button Content="Refresh Preview"
+                    Click="Refresh_Click" />
+
+            <Button Content="Close"
+                    Width="90"
+                    Click="Close_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

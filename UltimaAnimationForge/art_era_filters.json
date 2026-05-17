@@ -1,0 +1,34 @@
+{
+  "eras": [
+    {
+      "name": "UO to ML",
+      "landRanges": [
+        {
+          "from": "0x0000",
+          "to": "0x3FFF"
+        }
+      ],
+      "staticRanges": [
+        {
+          "from": "0x0000",
+          "to": "0x400B"
+        }
+      ]
+    },
+    {
+      "name": "HS to LASTEST",
+      "landRanges": [
+        {
+          "from": "0x400C",
+          "to": "0x3FFF"
+        }
+      ],
+      "staticRanges": [
+        {
+          "from": "0x400C",
+          "to": "0xB4E3"
+        }
+      ]
+    }
+  ]
+}
